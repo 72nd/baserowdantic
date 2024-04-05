@@ -1,0 +1,21 @@
+[project]
+name = "baserowdantic"
+version = "0.1.0"
+authors = [
+    {name = "Irvin Hostettler, ALEX Berlin", email = "hostettler@alex-berlin.de"}
+]
+description = "Pydantic-based Baserow CRUD Client featuring ORM-like capabilities"
+readme = "README.md"
+keywords = ["baserow", "pydantic", "no-code", "orm", "database"]
+dependencies = [
+    "aiohttp"
+]
+
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.9",
+    "Operating System :: OS Independent",
+]
+
+[tool.setuptools.packages.find]
+where = ["src/"]

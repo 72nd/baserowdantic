@@ -5,6 +5,8 @@ This module handles the interaction with Baserow's API.
 from typing import Optional
 import aiohttp
 
+from baserow.error import PackageClientAlreadyDefinedError, SingletonAlreadyConfiguredError
+
 
 def url_join(*parts: str) -> str:
     """Joins given strings into a URL."""
@@ -80,7 +82,34 @@ class SingletonClient(Client):
         Set the URL and token before the first use of the client.
         """
         if cls._is_configured:
-            raise RuntimeError("singleton was already configured")
+            raise SingletonAlreadyConfiguredError(
+                "singleton client was already configured",
+            )
         cls.__url = url
         cls.__token = token
         cls._is_configured = True
+
+
+global_client = SingletonClient
+"""
+If the functions of the package should always interact with the same Baserow
+instance in an application, the global client can be set. Once configured, this
+client will be used for all API calls, unless a different client is specified
+for specific functions. To configure this, the client_config method should be
+used.
+
+To prevent unpredictable behavior, the package-wide client can only be set once
+per runtime.
+"""
+
+
+def client_config(url: str, token: str):
+    """
+    This method can be used to set up the package-wide client, which will then
+    be utilized by default unless a specific client is designated for a given
+    method. The client can only be configured once.
+    """
+    try:
+        global_client.configure(url, token)
+    except SingletonAlreadyConfiguredError:
+        raise PackageClientAlreadyDefinedError(global_client()._url, url)

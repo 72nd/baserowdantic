@@ -27,3 +27,41 @@ class PackageClientAlreadyDefinedError(Exception):
 
     def __str__(self):
         return f"attempted to configure the package-wide client with the URL '{self.new_url}', even though it was already configured with the URL '{self.old_url}'"
+
+
+class BaserowError(Exception):
+    """
+    Exception thrown when an HTTP request to the Baserow REST API returns an
+    error.
+
+    Args:
+        status_code (int): HTTP status code.
+        name (str): Name/title of the error.
+        detail (str): Additional detail.
+    """
+
+    def __init__(self, status_code: int, name: str, detail: str):
+        self.status_code = status_code
+        self.name = name
+        self.detail = detail
+
+    def __str__(self):
+        return f"Baserow returned an {self.name} error with status code {self.status_code}: {self.detail}"
+
+
+class UnspecifiedBaserowError(Exception):
+    """
+    Thrown when the Baserow HTTP call returns a non-success state but not with
+    status code 400.
+
+    Args:
+        status_code (int): HTTP status code.
+        body (str): String representation of the body.
+    """
+
+    def __init__(self, status_code: int, body: str):
+        self.status_code = status_code
+        self.body = body
+
+    def __str__(self):
+        return f"Baserow returned an error with status code {self.status_code}: {self.body}"

@@ -2,6 +2,7 @@
 This module handles the interaction with Baserow's REST API over HTTP.
 """
 
+import asyncio
 from re import I
 from typing import Any, Generic, Optional, Protocol, Type, TypeVar
 import aiohttp
@@ -74,60 +75,6 @@ class Client:
         self._headers: dict[str, str] = {"Authorization": f"Token {token}"}
         self._session: aiohttp.ClientSession = aiohttp.ClientSession()
 
-    async def list_all_table_rows(
-        self,
-        table_id: int,
-        user_field_names: bool,
-        result_type: Optional[Type[T]] = None,
-        filter: Optional[Filter] = None,
-        order_by: Optional[list[str]] = None,
-    ) -> Response[list[T]]:
-        """
-        Lists rows in the table with the given ID. Note that Baserow uses
-        paging. If all rows are requested, the page parameter can be set to
-        `-1`. The data will then be aggregated using multiple calls.
-
-        Args:
-            table_id (int): The ID of the table to be queried. user_field_names
-            (bool): When set to true, the returned fields will
-                be named according to their field names. Otherwise, the unique
-                IDs of the fields will be used.
-            result_type (Optional[Type[T]]): Which type will appear as an item
-                in the result list and should be serialized accordingly. If set
-                to None, Pydantic will attempt to serialize it to the standard
-                types.
-            filter (Optional[list[Filter]], optional): Allows the dataset to be
-                filtered.
-            order_by (Optional[list[str]], optional): A list of field names/IDs
-                by which the result should be sorted. If the field name is
-                prepended with a +, the sorting is ascending; if with a -, it is
-                descending.
-        """
-        rsl: Optional[Response[list[T]]] = None
-        count: Optional[int] = None
-        page = 1
-        while True:
-            tmp = await self.list_table_rows(
-                table_id,
-                user_field_names,
-                result_type=result_type,
-                filter=filter,
-                order_by=order_by,
-                page=page,
-                size=200,
-            )
-            if count is None:
-                count = tmp.count
-
-            if rsl is None:
-                rsl = tmp
-            else:
-                rsl.results.extend(tmp.results)
-            if page * 200 >= count:
-                break
-            page += 1
-        return rsl
-
     async def list_table_rows(
         self,
         table_id: int,
@@ -140,12 +87,12 @@ class Client:
     ) -> Response[list[T]]:
         """
         Lists rows in the table with the given ID. Note that Baserow uses
-        paging. If all rows are requested, the page parameter can be set to
-        `-1`. The data will then be aggregated using multiple calls.
+        paging. If all rows of a table are needed, the
+        Client.list_all_table_rows method can be used.
 
         Args:
-            table_id (int): The ID of the table to be queried. user_field_names
-            (bool): When set to true, the returned fields will
+            table_id (int): The ID of the table to be queried.
+            user_field_names (bool): When set to true, the returned fields will
                 be named according to their field names. Otherwise, the unique
                 IDs of the fields will be used.
             result_type (Optional[Type[T]]): Which type will appear as an item
@@ -180,6 +127,87 @@ class Client:
         if result_type is not None:
             return await self._request("get", url, list[result_type], params=params)
         return await self._request("get", url, None, params=params)
+
+    async def list_all_table_rows(
+        self,
+        table_id: int,
+        user_field_names: bool,
+        result_type: Optional[Type[T]] = None,
+        filter: Optional[Filter] = None,
+        order_by: Optional[list[str]] = None,
+    ) -> Response[list[T]]:
+        """
+        Since Baserow uses paging, this method sends as many requests to Baserow
+        as needed until all rows are received. This function should only be used
+        when all data is truly needed. This should be a rare occurrence, as
+        filtering can occur on Baserow's side using the filter parameter.
+
+        Args:
+            table_id (int): The ID of the table to be queried. user_field_names
+            (bool): When set to true, the returned fields will
+                be named according to their field names. Otherwise, the unique
+                IDs of the fields will be used.
+            result_type (Optional[Type[T]]): Which type will appear as an item
+                in the result list and should be serialized accordingly. If set
+                to None, Pydantic will attempt to serialize it to the standard
+                types.
+            filter (Optional[list[Filter]], optional): Allows the dataset to be
+                filtered.
+            order_by (Optional[list[str]], optional): A list of field names/IDs
+                by which the result should be sorted. If the field name is
+                prepended with a +, the sorting is ascending; if with a -, it is
+                descending.
+        """
+        count: int = await self.table_row_count(table_id)
+        total_calls = (count + 200 - 1) // 200
+
+        requests = []
+        for page in range(1, total_calls+1):
+            rqs = asyncio.create_task(
+                self.list_table_rows(
+                    table_id,
+                    user_field_names,
+                    result_type=result_type,
+                    filter=filter,
+                    order_by=order_by,
+                    page=page,
+                    size=200,
+                )
+            )
+            requests.append(rqs)
+        responses = await asyncio.gather(*requests)
+
+        rsl: Optional[Response[list[T]]] = None
+        for rsp in responses:
+            if rsl is None:
+                rsl = rsp
+            else:
+                rsl.results.extend(rsp.results)
+        if rsl is None:
+            return Response(
+                count=0,
+                previous=None,
+                next=None,
+                results=[],
+            )
+        return rsl
+
+    async def table_row_count(self, table_id: int, filter: Optional[Filter] = None) -> int:
+        """
+        Determines how many rows or records are present in the table with the
+        given ID. Filters can be optionally passed as parameters.
+
+        Args:
+            table_id (int): The ID of the table to be queried.
+            filter (Optional[list[Filter]], optional): Allows the dataset to be
+                filtered. Only rows matching the filter will be counted.
+        """
+        rsl = await self.list_table_rows(table_id, True, filter=filter, size=1)
+        return rsl.count
+
+    async def close(self):
+        """Close the session."""
+        await self._session.close()
 
     async def _request(
         self,

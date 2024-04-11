@@ -29,6 +29,22 @@ dave_count = await client.table_row_count(
     filter=AndFilter().contains("Name", "Dave"),
 )
 print(f"Total persons: {total_count}, persons called Dave: {dave_count}")
+
+client.close()
 ```
 
+
 ### List Table Rows
+
+The method reads the entries or records of a table in Baserow. It is possible to filter, sort, select one of the pages (Baserow API uses paging), and determine the number (size) of returned records (between 1 to 200). If it is necessary to retrieve all entries of a table, the method list_all_table_rows exists for this purpose. This method should be used with caution, as many API calls to Baserow may be triggered depending on the size of the table.
+
+```python
+from baserow import Client, AndFilter
+
+rsl 
+
+client.close()
+```
+
+
+### Singleton

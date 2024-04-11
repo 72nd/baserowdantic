@@ -11,4 +11,24 @@ As such, it is quite opinionated and supports only a small subset of the API. Us
 
 ## Basic Client
 
+Even though Baserowdantic focuses on interacting with Pydantic using Pydantic data models, the Client class used can also be directly employed. The Client class provides CRUD (create, read, update, delete) operations on a Baserow table. It is entirely asynchronous.
+
+
+### Count Table Rows
+
+This method returns the number of rows or records in a Baserow table. Filters can be optionally passed as parameters.
+
+```python
+from baserow import Client, AndFilter
+
+client = Client("baserow.example.com", "<API-TOKEN>")
+
+total_count = await client.table_row_count(1000)
+dave_count = await client.table_row_count(
+    1000,
+    filter=AndFilter().contains("Name", "Dave"),
+)
+print(f"Total persons: {total_count}, persons called Dave: {dave_count}")
+```
+
 ### List Table Rows

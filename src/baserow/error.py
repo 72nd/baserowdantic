@@ -1,3 +1,8 @@
+"""
+This module contains the custom exceptions of the package.
+"""
+
+
 class SingletonAlreadyConfiguredError(Exception):
     """
     Thrown when an attempt is made to call the configuration method on an already configured singleton again.

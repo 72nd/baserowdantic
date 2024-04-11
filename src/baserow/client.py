@@ -1,17 +1,50 @@
 """
-This module handles the interaction with Baserow's API.
+This module handles the interaction with Baserow's REST API over HTTP.
 """
 
-from typing import Optional
+from typing import Any, Generic, Optional, Protocol, Type, TypeVar
 import aiohttp
+from pydantic import BaseModel, Field, JsonValue
 
 from baserow.error import PackageClientAlreadyDefinedError, SingletonAlreadyConfiguredError
+from baserow.filter import Filter
 
 
-def url_join(*parts: str) -> str:
+API_PREFIX = "api"
+
+
+def _url_join(*parts: str) -> str:
     """Joins given strings into a URL."""
     rsl = [part.strip("/") for part in parts]
-    return "/".join(rsl)
+    return "/".join(rsl) + "/"
+
+
+def _list_to_str(items: list[str]) -> str:
+    return ",".join(items)
+
+
+T = TypeVar("T")
+
+
+class JsonSerializable(Protocol):
+    @classmethod
+    def model_validate_json(cls, data: str):
+        ...
+
+
+class Result(BaseModel, Generic[T]):
+    """The return object of all API calls."""
+    count: int
+    next: Optional[str]
+    previous: Optional[str]
+    results: T
+
+
+class Test(BaseModel):
+    id: int
+    order: float
+    name: str = Field(alias=str("Name"))
+    age: int = Field(alias=str("Age"))
 
 
 class Client:
@@ -33,11 +66,93 @@ class Client:
 
     def __init__(self, url: str, token: str):
         self._url: str = url
-        self._token: str = token
+        self._headers: dict[str, str] = {"Authorization": f"Token {token}"}
         self._session: aiohttp.ClientSession = aiohttp.ClientSession()
 
-    def test(self):
-        return self._url
+    async def list_table_rows(
+        self,
+        table_id: int,
+        user_field_names: bool,
+        result_type: Optional[Type[T]] = None,
+        filter: Optional[Filter] = None,
+        order_by: Optional[list[str]] = None,
+        page: Optional[int] = None,
+        size: Optional[int] = None,
+    ):
+        """
+        Lists rows in the table with the given ID. Note that Baserow uses
+        paging. If all rows are requested, the page parameter can be set to
+        `-1`. The data will then be aggregated using multiple calls.
+
+        Args:
+            table_id (int): The ID of the table to be queried. user_field_names
+            (bool): When set to true, the returned fields will
+                be named according to their field names. Otherwise, the unique
+                IDs of the fields will be used.
+            result_type (Type[T]): The pydantic model which should be used to
+                serialize the response field of the response. If set to None
+                pydantic will try to serialize the response with built-in types.
+                Aka `pydantic.JsonValue`.
+            filter (Optional[list[Filter]], optional): Allows the dataset to be
+                filtered.
+            order_by (Optional[list[str]], optional): A list of field names/IDs
+                by which the result should be sorted. If the field name is
+                prepended with a +, the sorting is ascending; if with a -, it is
+                descending.
+            page (Optional[int], optional): The page of the paging. If set to
+                `-1` all rows will be queried using multiple calls.
+            size (Optional[int], optional): How many records should be returned
+                at max. Defaults to 100.
+        """
+        params: dict[str, str] = {}
+        params["user_field_names"] = "true" if user_field_names else "false"
+        if filter is not None:
+            params["filters"] = filter.model_dump_json()
+        if order_by is not None:
+            params["order_by"] = _list_to_str(order_by)
+        if page is not None:
+            params["page"] = str(page)
+        if size is not None:
+            params["size"] = str(size)
+        return await self._request(
+            "get",
+            _url_join(
+                self._url, API_PREFIX,
+                "database/rows/table",
+                str(table_id),
+            ),
+            result_type,
+            params=params,
+        )
+
+    async def _request(
+        self,
+        method: str,
+        url: str,
+        result_type: Optional[Type[T]],
+        headers: Optional[dict[str, str]] = None,
+        params: Optional[dict[str, str]] = None,
+        json: Optional[dict[str, str]] = None,
+    ) -> Result[T]:
+        """
+        Handles the actual HTTP request.
+        """
+        request_headers = self._headers
+        if headers is not None:
+            request_headers = self._headers.copy()
+            request_headers.update(headers)
+        async with self._session.request(
+            method,
+            url,
+            headers=request_headers,
+            params=params,
+            json=json,
+        ) as rsp:
+            if result_type is not None:
+                model = Result[result_type]
+            else:
+                model = Result[Any]
+            return model.model_validate_json(await rsp.text())
 
 
 class SingletonClient(Client):

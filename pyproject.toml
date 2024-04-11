@@ -8,7 +8,8 @@ description = "Pydantic-based Baserow CRUD Client featuring ORM-like capabilitie
 readme = "README.md"
 keywords = ["baserow", "pydantic", "no-code", "orm", "database"]
 dependencies = [
-    "aiohttp"
+    "aiohttp",
+    "pydantic"
 ]
 
 classifiers = [

@@ -33,7 +33,7 @@ class JsonSerializable(Protocol):
         ...
 
 
-class Result(BaseModel, Generic[T]):
+class Response(BaseModel, Generic[T]):
     """The return object of all API calls."""
     count: int
     next: Optional[str]
@@ -41,7 +41,7 @@ class Result(BaseModel, Generic[T]):
     results: T
 
 
-class ErrorResult(BaseModel):
+class ErrorResponse(BaseModel):
     """
     The return object from Baserow when the request was unsuccessful. Contains
     information about the reasons for the failure.
@@ -74,16 +74,14 @@ class Client:
         self._headers: dict[str, str] = {"Authorization": f"Token {token}"}
         self._session: aiohttp.ClientSession = aiohttp.ClientSession()
 
-    async def list_table_rows(
+    async def list_all_table_rows(
         self,
         table_id: int,
         user_field_names: bool,
         result_type: Optional[Type[T]] = None,
         filter: Optional[Filter] = None,
         order_by: Optional[list[str]] = None,
-        page: Optional[int] = None,
-        size: Optional[int] = None,
-    ):
+    ) -> Response[list[T]]:
         """
         Lists rows in the table with the given ID. Note that Baserow uses
         paging. If all rows are requested, the page parameter can be set to
@@ -94,20 +92,75 @@ class Client:
             (bool): When set to true, the returned fields will
                 be named according to their field names. Otherwise, the unique
                 IDs of the fields will be used.
-            result_type (Type[T]): The pydantic model which should be used to
-                serialize the response field of the response. If set to None
-                pydantic will try to serialize the response with built-in types.
-                Aka `pydantic.JsonValue`.
+            result_type (Optional[Type[T]]): Which type will appear as an item
+                in the result list and should be serialized accordingly. If set
+                to None, Pydantic will attempt to serialize it to the standard
+                types.
             filter (Optional[list[Filter]], optional): Allows the dataset to be
                 filtered.
             order_by (Optional[list[str]], optional): A list of field names/IDs
                 by which the result should be sorted. If the field name is
                 prepended with a +, the sorting is ascending; if with a -, it is
                 descending.
-            page (Optional[int], optional): The page of the paging. If set to
-                `-1` all rows will be queried using multiple calls.
+        """
+        rsl: Optional[Response[list[T]]] = None
+        count: Optional[int] = None
+        page = 1
+        while True:
+            tmp = await self.list_table_rows(
+                table_id,
+                user_field_names,
+                result_type=result_type,
+                filter=filter,
+                order_by=order_by,
+                page=page,
+                size=200,
+            )
+            if count is None:
+                count = tmp.count
+
+            if rsl is None:
+                rsl = tmp
+            else:
+                rsl.results.extend(tmp.results)
+            if page * 200 >= count:
+                break
+            page += 1
+        return rsl
+
+    async def list_table_rows(
+        self,
+        table_id: int,
+        user_field_names: bool,
+        result_type: Optional[Type[T]] = None,
+        filter: Optional[Filter] = None,
+        order_by: Optional[list[str]] = None,
+        page: Optional[int] = None,
+        size: Optional[int] = None,
+    ) -> Response[list[T]]:
+        """
+        Lists rows in the table with the given ID. Note that Baserow uses
+        paging. If all rows are requested, the page parameter can be set to
+        `-1`. The data will then be aggregated using multiple calls.
+
+        Args:
+            table_id (int): The ID of the table to be queried. user_field_names
+            (bool): When set to true, the returned fields will
+                be named according to their field names. Otherwise, the unique
+                IDs of the fields will be used.
+            result_type (Optional[Type[T]]): Which type will appear as an item
+                in the result list and should be serialized accordingly. If set
+                to None, Pydantic will attempt to serialize it to the standard
+                types.
+            filter (Optional[list[Filter]], optional): Allows the dataset to be
+                filtered.
+            order_by (Optional[list[str]], optional): A list of field names/IDs
+                by which the result should be sorted. If the field name is
+                prepended with a +, the sorting is ascending; if with a -, it is
+                descending.
+            page (Optional[int], optional): The page of the paging.
             size (Optional[int], optional): How many records should be returned
-                at max. Defaults to 100.
+                at max. Defaults to 100 and is 200.
         """
         params: dict[str, str] = {}
         params["user_field_names"] = "true" if user_field_names else "false"
@@ -119,16 +172,14 @@ class Client:
             params["page"] = str(page)
         if size is not None:
             params["size"] = str(size)
-        return await self._request(
-            "get",
-            _url_join(
-                self._url, API_PREFIX,
-                "database/rows/table",
-                str(table_id),
-            ),
-            result_type,
-            params=params,
+        url = _url_join(
+            self._url, API_PREFIX,
+            "database/rows/table",
+            str(table_id),
         )
+        if result_type is not None:
+            return await self._request("get", url, list[result_type], params=params)
+        return await self._request("get", url, None, params=params)
 
     async def _request(
         self,
@@ -138,9 +189,15 @@ class Client:
         headers: Optional[dict[str, str]] = None,
         params: Optional[dict[str, str]] = None,
         json: Optional[dict[str, str]] = None,
-    ) -> Result[T]:
+    ) -> Response[T]:
         """
         Handles the actual HTTP request.
+
+        Args:
+            result_type (Type[T]): The pydantic model which should be used to
+                serialize the response field of the response. If set to None
+                pydantic will try to serialize the response with built-in types.
+                Aka `pydantic.JsonValue`.
         """
         request_headers = self._headers
         if headers is not None:
@@ -154,14 +211,14 @@ class Client:
             json=json,
         ) as rsp:
             if rsp.status == 400:
-                err = ErrorResult.model_validate_json(await rsp.text())
+                err = ErrorResponse.model_validate_json(await rsp.text())
                 raise BaserowError(rsp.status, err.error, err.detail)
             if rsp.status != 200:
                 raise UnspecifiedBaserowError(rsp.status, await rsp.text())
             if result_type is not None:
-                model = Result[result_type]
+                model = Response[result_type]
             else:
-                model = Result[Any]
+                model = Response[Any]
             return model.model_validate_json(await rsp.text())
 
 

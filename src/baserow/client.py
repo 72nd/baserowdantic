@@ -289,6 +289,21 @@ class Client:
             FieldResponse,
         )
 
+    async def get_row(self, table_id: int, row_id: int, user_field_names: bool, result_type: Type[T]) -> T:
+        """Fetch a single row/entry from the given table by the row ID."""
+        return await self._request(
+            "get",
+            _url_join(
+                self._url,
+                API_PREFIX,
+                "database/rows/table",
+                str(table_id),
+                str(row_id),
+            ),
+            result_type,
+            params={"user_field_names": "true" if user_field_names else "false"}
+        )
+
     async def close(self):
         """Close the session."""
         await self._session.close()

@@ -2,11 +2,12 @@
 This module handles the interaction with Baserow's REST API over HTTP.
 """
 
+from re import I
 from typing import Any, Generic, Optional, Protocol, Type, TypeVar
 import aiohttp
 from pydantic import BaseModel, Field, JsonValue
 
-from baserow.error import PackageClientAlreadyDefinedError, SingletonAlreadyConfiguredError
+from baserow.error import BaserowError, PackageClientAlreadyDefinedError, SingletonAlreadyConfiguredError, UnspecifiedBaserowError
 from baserow.filter import Filter
 
 
@@ -40,11 +41,15 @@ class Result(BaseModel, Generic[T]):
     results: T
 
 
-class Test(BaseModel):
-    id: int
-    order: float
-    name: str = Field(alias=str("Name"))
-    age: int = Field(alias=str("Age"))
+class ErrorResult(BaseModel):
+    """
+    The return object from Baserow when the request was unsuccessful. Contains
+    information about the reasons for the failure.
+    """
+    error: str
+    """Short error enum."""
+    detail: Any
+    """Additional information on the error."""
 
 
 class Client:
@@ -107,7 +112,7 @@ class Client:
         params: dict[str, str] = {}
         params["user_field_names"] = "true" if user_field_names else "false"
         if filter is not None:
-            params["filters"] = filter.model_dump_json()
+            params["filters"] = filter.model_dump_json(by_alias=True)
         if order_by is not None:
             params["order_by"] = _list_to_str(order_by)
         if page is not None:
@@ -148,6 +153,11 @@ class Client:
             params=params,
             json=json,
         ) as rsp:
+            if rsp.status == 400:
+                err = ErrorResult.model_validate_json(await rsp.text())
+                raise BaserowError(rsp.status, err.error, err.detail)
+            if rsp.status != 200:
+                raise UnspecifiedBaserowError(rsp.status, await rsp.text())
             if result_type is not None:
                 model = Result[result_type]
             else:

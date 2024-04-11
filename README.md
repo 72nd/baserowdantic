@@ -7,3 +7,8 @@ This package provides a [CRUD](https://en.wikipedia.org/wiki/Create,_read,_updat
 - Be fully asynchronous.
 
 As such, it is quite opinionated and supports only a small subset of the API. Users seeking more functionality may consider alternatives like the [python-baserow-client](https://github.com/NiklasRosenstein/python-baserow-client). Interaction with Baserow is facilitated through the definition of Pydantic models, ensuring data validation. The library is written to be fully asynchronous, integrating well with frameworks such as [FastAPI](https://fastapi.tiangolo.com/).
+
+
+## Basic Client
+
+### List Table Rows

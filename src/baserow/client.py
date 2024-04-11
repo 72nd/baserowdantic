@@ -3,10 +3,12 @@ This module handles the interaction with Baserow's REST API over HTTP.
 """
 
 import asyncio
+import enum
 from re import I
-from typing import Any, Generic, Optional, Protocol, Type, TypeVar
+from typing import Any, Generic, Optional, Protocol, Type, TypeVar, Union
 import aiohttp
-from pydantic import BaseModel, Field, JsonValue
+from pydantic import BaseModel, Field, JsonValue, RootModel, parse_obj_as
+from pydantic.version import parse_mypy_version
 
 from baserow.error import BaserowError, PackageClientAlreadyDefinedError, SingletonAlreadyConfiguredError, UnspecifiedBaserowError
 from baserow.filter import Filter
@@ -25,7 +27,7 @@ def _list_to_str(items: list[str]) -> str:
     return ",".join(items)
 
 
-T = TypeVar("T")
+T = TypeVar("T", bound=Union[BaseModel, RootModel])
 
 
 class JsonSerializable(Protocol):
@@ -34,12 +36,77 @@ class JsonSerializable(Protocol):
         ...
 
 
-class Response(BaseModel, Generic[T]):
-    """The return object of all API calls."""
+class RowResponse(BaseModel, Generic[T]):
+    """The return object of list row API calls."""
     count: int
     next: Optional[str]
     previous: Optional[str]
-    results: T
+    results: list[T]
+
+
+class FieldType(str, enum.Enum):
+    """The various types that Baserow fields can have."""
+    TEXT = "text"
+    NUMBER = "number"
+    LONG_TEXT = "long_text"
+    LINK_ROW = "link_row"
+    BOOLEAN = "boolean"
+    DATE = "date"
+    RATING = "rating"
+    LAST_MODIFIED = "last_modified"
+    LAST_MODIFIED_BY = "last_modified_by"
+    CREATED_ON = "created_on"
+    CREATED_BY = "created_by"
+    DURATION = "duration"
+    URL = "url"
+    EMAIL = "email"
+    FILE = "file"
+    SINGLE_SELECT = "single_select"
+    MULTIPLE_SELECT = "multiple_select"
+    PHONE_NUMBER = "phone_number"
+    FORMULA = "formula"
+    ROLLUP = "rollup"
+    LOOKUP = "lookup"
+    MULTIPLE_COLLABORATORS = "multiple_collaborators"
+    UUID = "uuid"
+    AUTONUMBER = "autonumber"
+    PASSWORD = "password"
+
+
+class FieldItem(BaseModel):
+    """
+    Describes a field of a table in Baserow.
+    """
+    id: int
+    """
+    Field primary key. Can be used to generate the database column name by
+    adding field_ prefix.
+    """
+    name: str
+    """Field name."""
+    table_id: int
+    """Related table id."""
+    order: int
+    """Field order in table. 0 for the first field."""
+    primary: bool
+    """
+    Indicates if the field is a primary field. If `True` the field cannot be
+    deleted and the value should represent the whole row.
+    """
+    type: FieldType
+    """Type defined for this field."""
+    read_only: bool
+    """
+    Indicates whether the field is a read only field. If true, it's not possible
+    to update the cell value. 
+    """
+
+
+class FieldResponse(RootModel[list[FieldItem]]):
+    """
+    The response for the list field call. Contains all fields of a table.
+    """
+    root: list[FieldItem]
 
 
 class ErrorResponse(BaseModel):
@@ -84,7 +151,7 @@ class Client:
         order_by: Optional[list[str]] = None,
         page: Optional[int] = None,
         size: Optional[int] = None,
-    ) -> Response[list[T]]:
+    ) -> RowResponse[T]:
         """
         Lists rows in the table with the given ID. Note that Baserow uses
         paging. If all rows of a table are needed, the
@@ -124,9 +191,11 @@ class Client:
             "database/rows/table",
             str(table_id),
         )
-        if result_type is not None:
-            return await self._request("get", url, list[result_type], params=params)
-        return await self._request("get", url, None, params=params)
+        if result_type:
+            model = RowResponse[result_type]
+        else:
+            model = RowResponse[Any]
+        return await self._request("get", url, model, params=params)
 
     async def list_all_table_rows(
         self,
@@ -135,7 +204,7 @@ class Client:
         result_type: Optional[Type[T]] = None,
         filter: Optional[Filter] = None,
         order_by: Optional[list[str]] = None,
-    ) -> Response[list[T]]:
+    ) -> RowResponse[T]:
         """
         Since Baserow uses paging, this method sends as many requests to Baserow
         as needed until all rows are received. This function should only be used
@@ -177,14 +246,14 @@ class Client:
             requests.append(rqs)
         responses = await asyncio.gather(*requests)
 
-        rsl: Optional[Response[list[T]]] = None
+        rsl: Optional[RowResponse[T]] = None
         for rsp in responses:
             if rsl is None:
                 rsl = rsp
             else:
                 rsl.results.extend(rsp.results)
         if rsl is None:
-            return Response(
+            return RowResponse(
                 count=0,
                 previous=None,
                 next=None,
@@ -205,6 +274,21 @@ class Client:
         rsl = await self.list_table_rows(table_id, True, filter=filter, size=1)
         return rsl.count
 
+    async def list_fields(self, table_id: int) -> FieldResponse:
+        """
+        Lists all fields (»columns«) of a table.
+        """
+        return await self._request(
+            "get",
+            _url_join(
+                self._url,
+                API_PREFIX,
+                "database/fields/table/",
+                str(table_id),
+            ),
+            FieldResponse,
+        )
+
     async def close(self):
         """Close the session."""
         await self._session.close()
@@ -213,11 +297,11 @@ class Client:
         self,
         method: str,
         url: str,
-        result_type: Optional[Type[T]],
+        result_type: Type[T],
         headers: Optional[dict[str, str]] = None,
         params: Optional[dict[str, str]] = None,
         json: Optional[dict[str, str]] = None,
-    ) -> Response[T]:
+    ) -> T:
         """
         Handles the actual HTTP request.
 
@@ -243,11 +327,8 @@ class Client:
                 raise BaserowError(rsp.status, err.error, err.detail)
             if rsp.status != 200:
                 raise UnspecifiedBaserowError(rsp.status, await rsp.text())
-            if result_type is not None:
-                model = Response[result_type]
-            else:
-                model = Response[Any]
-            return model.model_validate_json(await rsp.text())
+            rsl = await rsp.text()
+            return result_type.model_validate_json(rsl)
 
 
 class SingletonClient(Client):

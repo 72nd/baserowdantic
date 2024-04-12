@@ -15,10 +15,8 @@ The code snippets demonstrated in this README assume a specific database structu
 
 <details>
   <summary>Person</summary>
-  <ul>
-    <li><b>Field-name</b> Type.</li>
-    <li><b>Field-name</b> Type.</li>
-  </ul>
+  - **Field name** Type
+  - **Field name** Type
 </details>
 <details>
   <summary>Company</summary>
@@ -26,6 +24,21 @@ The code snippets demonstrated in this README assume a specific database structu
     <li><b>Field-name</b> Type.</li>
     <li><b>Field-name</b> Type.</li>
   </ul>
+</details>
+
+The example code provided frequently references two specific data models: `Person` and `Company`. Definitions and schemas for these models can be found below.
+
+<details>
+  <summary>Person</summary>
+    ```python
+    from baserow import Client
+    ```
+</details>
+<details>
+  <summary>Company</summary>
+    ```python
+    from baserow import Client
+    ```
 </details>
 
 
@@ -54,12 +67,27 @@ client = Client("baserow.example.com", token="<API-TOKEN>")
 client = Client("baserow.example.com", email="baserow.user@example.com", password="<PASSWORD>")
 ```
 
-### Singleton Client
+### Singleton/Global Client
 
-In many applications, there is a consistent connection to a single Baserow instance throughout the runtime. For performance reasons, it is optimal to use only one session, thus a single client instance. This package includes a client with singleton functionality, which means the singleton only needs to be configured once using `SingletonClient.configure()`. After configuration, the same instance of the client is used consistently. The usage of the `configure()` class method is analog to the initialization method of Client().
+In many applications, maintaining a consistent connection to a single Baserow instance throughout the runtime is crucial. To facilitate this, the package provides a Global Client, which acts as a singleton. This means the client needs to be configured just once using GlobalClient.configure(). After this initial setup, the Global Client can be universally accessed and used throughout the program.
+
+When utilizing the ORM functionality of the table models, all methods within the table models inherently use this Global Client. Please note that the Global Client **can only be configured once**. Attempting to call the `configure()` method more than once will result in an exception. 
 
 ```python
-from baserow import SingletonClient
+from baserow import GlobalClient
+
+# Either configure the global client with a database token...
+GlobalClient.configure("baserow.example.com", token="<API-TOKEN>")
+
+# ...or with the login credentials (email and password).
+GlobalClient.configure(
+    "baserow.example.com",
+    email="baserow.user@example.com",
+    password="<PASSWORD>",
+)
+
+# Use the global client just like you would use any other client instance.
+persons = await GlobalClient().get_row(23, 42, True, Person)
 ```
 
 This setup ensures that your application maintains optimal performance by reusing the same client instance, minimizing the overhead associated with establishing multiple connections or instances.

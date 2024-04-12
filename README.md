@@ -9,6 +9,16 @@ This package provides a [CRUD](https://en.wikipedia.org/wiki/Create,_read,_updat
 As such, it is quite opinionated and supports only a small subset of the API. Users seeking more functionality may consider alternatives like the [python-baserow-client](https://github.com/NiklasRosenstein/python-baserow-client). Interaction with Baserow is facilitated through the definition of Pydantic models, ensuring data validation. The library is written to be fully asynchronous, integrating well with frameworks such as [FastAPI](https://fastapi.tiangolo.com/).
 
 
+## A word on the examples
+
+<details>
+  <summary>Click to expand</summary>
+
+  This is the content of the expandable block.
+</details>
+
+
+
 ## Basic Client
 
 Even though Baserowdantic focuses on interacting with Pydantic using Pydantic data models, the Client class used can also be directly employed. The Client class provides CRUD (create, read, update, delete) operations on a Baserow table. It is entirely asynchronous.

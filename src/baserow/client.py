@@ -3,18 +3,22 @@ This module handles the interaction with Baserow's REST API over HTTP.
 """
 
 import asyncio
+from contextvars import Token
 import enum
 from re import I
 from typing import Any, Generic, Optional, Protocol, Type, TypeVar, Union
 import aiohttp
-from pydantic import BaseModel, Field, JsonValue, RootModel, parse_obj_as
-from pydantic.version import parse_mypy_version
+from pydantic import BaseModel, RootModel
 
 from baserow.error import BaserowError, PackageClientAlreadyDefinedError, SingletonAlreadyConfiguredError, UnspecifiedBaserowError
 from baserow.filter import Filter
 
 
-API_PREFIX = "api"
+API_PREFIX: str = "api"
+"""URL prefix for all API call URLs."""
+
+CONTENT_TYPE_JSON: dict[str, str] = {"Content-Type": "application/json"}
+"""HTTP Header when content type is JSON."""
 
 
 def _url_join(*parts: str) -> str:
@@ -42,6 +46,13 @@ class RowResponse(BaseModel, Generic[T]):
     next: Optional[str]
     previous: Optional[str]
     results: list[T]
+
+
+class TokenResponse(BaseModel):
+    """Result of an authentication token call."""
+    user: Any
+    access_token: str
+    refresh_token: str
 
 
 class FieldType(str, enum.Enum):
@@ -123,24 +134,85 @@ class ErrorResponse(BaseModel):
 class Client:
     """
     This class manages interaction with the Baserow server via HTTP using REST
-    API calls. Authentication is handled through a token, which can be generated
-    in Baserow. Currently, authentication via JWT (JSON Web Tokens) is not
-    supported, as token-based authentication suffices for CRUD operations.
+    API calls. Access to the Baserow API requires authentication, and there are
+    tow methods available: Database Tokens and JWT Tokens.
+
+    Database tokens are designed for delivering data to frontends and, as such,
+    can only perform CRUD (Create, Read, Update, Delete) operations on a
+    database. New tokens can be created in the User Settings, where their
+    permissions can also be configured. JWT Tokens are required for all other
+    functionalities, which can be obtained by providing login credentials (email
+    address and password) to the Baserow API. A client can only be initialized
+    with either the database token OR the login credentials.
 
     This client can also be used directly, without utilizing the ORM
     functionality of the package.
 
     Args:
         url (str): The base URL of the Baserow instance.
-        token (str): An access token (referred to as a database token in
-            Baserow's documentation) can be generated in the settings of
-            Baserow.
+        token (str, optional): An access token (referred to as a database token
+            in Baserow's documentation) can be generated in the user settings
+            within Baserow.
+        email (str, optional): Email address of a Baserow user for the JWT
+            authentication.
+        password (str, optional): Password of a Baserow user for the JWT
+            authentication.
     """
 
-    def __init__(self, url: str, token: str):
-        self._url: str = url
-        self._headers: dict[str, str] = {"Authorization": f"Token {token}"}
+    def __init__(
+        self,
+        url: str,
+        token: Optional[str] = None,
+        email: Optional[str] = None,
+        password: Optional[str] = None,
+    ):
+        if not token and not email and not password:
+            raise ValueError(
+                "you must either provide a database token or the login credentials (email, password) of a user"
+            )
+        if token and (email or password):
+            raise ValueError(
+                "passing parameters for both types of authentication (database token and login credentials) simultaneously is not allowed"
+            )
+        if not token and (not email or not password):
+            missing = "email" if not email else "password"
+            raise ValueError(
+                f"""incomplete authentication with login credentials, {
+                    missing} is missing"""
+            )
+        self._url = url
+        self._token = token
+        self._email = email
+        self._password = password
         self._session: aiohttp.ClientSession = aiohttp.ClientSession()
+        # Cache is only accessed by __header() method.
+        self.__headers_cache: Optional[dict[str, str]] = None
+
+    async def token_auth(self, email: str, password: str) -> TokenResponse:
+        """
+        Authenticates an existing user based on their email and their password.
+        If successful, an access token will be returned.
+
+        This method is designed to function even with a partially initialized
+        instance, as it's used for optional JWT token retrieval during class
+        initialization.
+
+        Args:
+            email (str): Email address of a Baserow user for the JWT
+                authentication.
+            password (str): Password of a Baserow user for the JWT
+                authentication.
+            url (url, optional): Optional base url.
+            session (aiohttp.ClientSession, optional): Optional client session.
+        """
+        return await self._typed_request(
+            "post",
+            _url_join(self._url, API_PREFIX, "user/token-auth"),
+            TokenResponse,
+            headers=CONTENT_TYPE_JSON,
+            json={"email": email, "password": password},
+            use_default_headers=False,
+        )
 
     async def list_table_rows(
         self,
@@ -176,8 +248,9 @@ class Client:
             size (Optional[int], optional): How many records should be returned
                 at max. Defaults to 100 and is 200.
         """
-        params: dict[str, str] = {}
-        params["user_field_names"] = "true" if user_field_names else "false"
+        params: dict[str, str] = {
+            "user_field_names": "true" if user_field_names else "false",
+        }
         if filter is not None:
             params["filters"] = filter.model_dump_json(by_alias=True)
         if order_by is not None:
@@ -195,7 +268,7 @@ class Client:
             model = RowResponse[result_type]
         else:
             model = RowResponse[Any]
-        return await self._request("get", url, model, params=params)
+        return await self._typed_request("get", url, model, params=params)
 
     async def list_all_table_rows(
         self,
@@ -277,8 +350,11 @@ class Client:
     async def list_fields(self, table_id: int) -> FieldResponse:
         """
         Lists all fields (»columns«) of a table.
+
+        Args:
+            table_id (int): The ID of the table to be queried.
         """
-        return await self._request(
+        return await self._typed_request(
             "get",
             _url_join(
                 self._url,
@@ -289,9 +365,32 @@ class Client:
             FieldResponse,
         )
 
-    async def get_row(self, table_id: int, row_id: int, user_field_names: bool, result_type: Type[T]) -> T:
-        """Fetch a single row/entry from the given table by the row ID."""
-        return await self._request(
+    async def get_row(
+        self,
+        table_id: int,
+        row_id: int,
+        user_field_names: bool,
+        result_type: Optional[Type[T]] = None,
+    ) -> T:
+        """
+        Fetch a single row/entry from the given table by the row ID.
+
+        Args:
+            table_id (int): The ID of the table to be queried.
+            row_id (int): The ID of the row to be returned.
+            user_field_names (bool): When set to true, the fields in the
+                provided data parameter are named according to their field
+                names. Otherwise, the unique IDs of the fields will be used.
+            result_type (Optional[Type[T]]): Which type will appear as an item
+                in the result list and should be serialized accordingly. If set
+                to None, Pydantic will attempt to serialize it to the standard
+                types.
+        """
+        if result_type:
+            model = result_type
+        else:
+            model = Any
+        return await self._typed_request(
             "get",
             _url_join(
                 self._url,
@@ -300,23 +399,131 @@ class Client:
                 str(table_id),
                 str(row_id),
             ),
-            result_type,
+            model,
             params={"user_field_names": "true" if user_field_names else "false"}
+        )
+        if not rsl:
+            raise ValueError("result shouldn't be None")
+        return rsl
+
+    async def create_row(
+        self,
+        table_id: int,
+        data: Union[T, dict[str, Any]],
+        user_field_names: bool,
+        before: Optional[int] = None,
+    ):
+        """
+        Creates a new row in the table with the given ID. The data can be
+        provided either as a dictionary or as a Pydantic model. Please note that
+        this method does not check whether the fields passed into the table
+        actually exist.
+
+        Args:
+            table_id (int): The ID of the table where the new row should be
+                created.
+            data (Union[T, dict[str, Any]]): The data of the new row.
+            user_field_names (bool): When set to true, the fields in the
+                provided data parameter are named according to their field
+                names. Otherwise, the unique IDs of the fields will be used.
+            before (Optional[int], optional):  If provided then the newly
+                created row will be positioned before the row with the provided
+                id. 
+        """
+        params: dict[str, str] = {
+            "user_field_names": "true" if user_field_names else "false",
+        }
+        if before is not None:
+            params["before"] = str(before)
+
+        if not isinstance(data, dict):
+            json = data.model_dump(by_alias=True)
+        else:
+            json = data
+
+        return self._request(
+            "post",
+            _url_join(
+                self._url,
+                API_PREFIX,
+                "database/rows/table",
+                str(table_id),
+            ),
+            None,
+            CONTENT_TYPE_JSON,
+            params,
+            json,
         )
 
     async def close(self):
-        """Close the session."""
+        """
+        The connection session with the client is terminated. Subsequently, the
+        client object cannot be used anymore. It is necessary to explicitly and
+        manually close the session only when the client object is directly
+        instantiated.
+        """
         await self._session.close()
+
+    async def __headers(
+        self,
+        parts: Optional[dict[str, str]],
+    ) -> dict[str, str]:
+        if self.__headers_cache is not None:
+            if parts is not None:
+                rsl = self.__headers_cache.copy()
+                rsl.update(parts)
+                return rsl
+            return self.__headers_cache
+
+        if self._token:
+            token = f"Token {self._token}"
+        elif self._email and self._password:
+            rsp = await self.token_auth(self._email, self._password)
+            token = f"JWT {rsp.access_token}"
+        else:
+            raise RuntimeError("logic error, shouldn't be possible")
+
+        self.__headers_cache = {"Authorization": token}
+        return await self.__headers(parts)
+
+    async def _typed_request(
+        self,
+        method: str,
+        url: str,
+        result_type: Optional[Type[T]],
+        headers: Optional[dict[str, str]] = None,
+        params: Optional[dict[str, str]] = None,
+        json: Optional[dict[str, str]] = None,
+        use_default_headers: bool = True,
+    ) -> T:
+        """
+        Wrap the _request method for all cases where the return value of the
+        request must not be None under any circumstances. If it is, a ValueError
+        will be raised.
+        """
+        rsl = await self._request(
+            method,
+            url,
+            result_type,
+            headers,
+            params,
+            json,
+            use_default_headers,
+        )
+        if not rsl:
+            raise ValueError("request result shouldn't be None")
+        return rsl
 
     async def _request(
         self,
         method: str,
         url: str,
-        result_type: Type[T],
+        result_type: Optional[Type[T]],
         headers: Optional[dict[str, str]] = None,
         params: Optional[dict[str, str]] = None,
         json: Optional[dict[str, str]] = None,
-    ) -> T:
+        use_default_headers: bool = True,
+    ) -> Optional[T]:
         """
         Handles the actual HTTP request.
 
@@ -326,14 +533,14 @@ class Client:
                 pydantic will try to serialize the response with built-in types.
                 Aka `pydantic.JsonValue`.
         """
-        request_headers = self._headers
-        if headers is not None:
-            request_headers = self._headers.copy()
-            request_headers.update(headers)
+        if use_default_headers:
+            headers = await self.__headers(headers)
+        else:
+            headers = {}
         async with self._session.request(
             method,
             url,
-            headers=request_headers,
+            headers=headers,
             params=params,
             json=json,
         ) as rsp:
@@ -342,11 +549,13 @@ class Client:
                 raise BaserowError(rsp.status, err.error, err.detail)
             if rsp.status != 200:
                 raise UnspecifiedBaserowError(rsp.status, await rsp.text())
-            rsl = await rsp.text()
-            return result_type.model_validate_json(rsl)
+            body = await rsp.text()
+            if result_type is not None:
+                return result_type.model_validate_json(body)
+            return None
 
 
-class SingletonClient(Client):
+class GlobalClient(Client):
     """
     The singleton version of the client encapsulates the client in a singleton.
     The parameters (URL and access tokens) can be configured independently of
@@ -366,7 +575,9 @@ class SingletonClient(Client):
     _is_initialized: bool = False
     _is_configured: bool = False
     __url: str = ""
-    __token: str = ""
+    __token: Optional[str] = None
+    __email: Optional[str] = None
+    __password: Optional[str] = None
 
     def __new__(cls):
         if not cls._is_configured:
@@ -379,13 +590,33 @@ class SingletonClient(Client):
 
     def __init__(self):
         if not self._is_initialized:
-            super().__init__(self.__url, self.__token)
+            super().__init__(
+                self.__url,
+                token=self.__token,
+                email=self.__email,
+                password=self.__password,
+            )
             self._is_initialized = True
 
     @classmethod
-    def configure(cls, url: str, token: str):
+    def configure(
+        cls,
+        url: str,
+        token: Optional[str] = None,
+        email: Optional[str] = None,
+        password: Optional[str] = None,
+    ):
         """
         Set the URL and token before the first use of the client.
+
+        Args:
+            token (str, optional): An access token (referred to as a database token
+                in Baserow's documentation) can be generated in the user settings
+                within Baserow.
+            email (str, optional): Email address of a Baserow user for the JWT
+                authentication.
+            password (str, optional): Password of a Baserow user for the JWT
+                authentication.
         """
         if cls._is_configured:
             raise SingletonAlreadyConfiguredError(
@@ -393,10 +624,12 @@ class SingletonClient(Client):
             )
         cls.__url = url
         cls.__token = token
+        cls.__email = email
+        cls.__password = password
         cls._is_configured = True
 
 
-global_client = SingletonClient
+global_client = GlobalClient
 """
 If the functions of the package should always interact with the same Baserow
 instance in an application, the global client can be set. Once configured, this
@@ -409,13 +642,32 @@ per runtime.
 """
 
 
-def client_config(url: str, token: str):
+def client_config(
+    url: str,
+    token: Optional[str] = None,
+    email: Optional[str] = None,
+    password: Optional[str] = None,
+):
     """
     This method can be used to set up the package-wide client, which will then
     be utilized by default unless a specific client is designated for a given
     method. The client can only be configured once.
+
+    Args:
+        token (str, optional): An access token (referred to as a database token
+            in Baserow's documentation) can be generated in the user settings
+            within Baserow.
+        email (str, optional): Email address of a Baserow user for the JWT
+            authentication.
+        password (str, optional): Password of a Baserow user for the JWT
+            authentication.
     """
     try:
-        global_client.configure(url, token)
+        global_client.configure(
+            url,
+            token=token,
+            email=email,
+            password=password,
+        )
     except SingletonAlreadyConfiguredError:
         raise PackageClientAlreadyDefinedError(global_client()._url, url)

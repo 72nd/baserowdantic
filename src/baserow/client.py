@@ -441,7 +441,7 @@ class Client:
         else:
             json = data
 
-        return self._request(
+        await self._request(
             "post",
             _url_join(
                 self._url,

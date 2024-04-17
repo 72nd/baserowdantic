@@ -25,8 +25,24 @@ class PackageClientAlreadyDefinedError(Exception):
         self.old_url = old_url
         self.new_url = new_url
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"attempted to configure the package-wide client with the URL '{self.new_url}', even though it was already configured with the URL '{self.old_url}'"
+
+
+class JWTAuthRequiredError(Exception):
+    """
+    Thrown when an operation with the API is only possible with user credentials
+    authentication.
+
+    Args:
+        name (str): Name or short description of the operation.
+    """
+
+    def __init__(self, name: str):
+        self.name = name
+
+    def __str__(self) -> str:
+        return f"the {self.name} method only works with a JWT (username and password) authentication"
 
 
 class BaserowError(Exception):
@@ -45,7 +61,7 @@ class BaserowError(Exception):
         self.name = name
         self.detail = detail
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"Baserow returned an {self.name} error with status code {self.status_code}: {self.detail}"
 
 
@@ -63,5 +79,5 @@ class UnspecifiedBaserowError(Exception):
         self.status_code = status_code
         self.body = body
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"Baserow returned an error with status code {self.status_code}: {self.body}"

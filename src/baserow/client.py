@@ -10,7 +10,7 @@ from typing import Any, Generic, Optional, Protocol, Type, TypeVar, Union
 import aiohttp
 from pydantic import BaseModel, RootModel
 
-from baserow.error import BaserowError, PackageClientAlreadyDefinedError, SingletonAlreadyConfiguredError, UnspecifiedBaserowError
+from baserow.error import BaserowError, JWTAuthRequiredError, PackageClientAlreadyDefinedError, SingletonAlreadyConfiguredError, UnspecifiedBaserowError
 from baserow.filter import Filter
 
 
@@ -89,6 +89,22 @@ class FieldType(str, enum.Enum):
     PASSWORD = "password"
 
 
+class DatabaseTable(BaseModel):
+    """
+    Item within the `DatabaseTableResponse`. Describes a table within a database
+    in Baserow.
+    """
+    id: int
+    name: str
+    order: int
+    database_id: int
+
+
+class DatabaseTablesResponse(RootModel[list[DatabaseTable]]):
+    """Contains all tables for a database in Baserow."""
+    root: list[DatabaseTable]
+
+
 class FieldItem(BaseModel):
     """
     Describes a field of a table in Baserow.
@@ -134,6 +150,33 @@ class ErrorResponse(BaseModel):
     """Short error enum."""
     detail: Any
     """Additional information on the error."""
+
+
+class AuthMethod(int, enum.Enum):
+    """
+    Differentiates between the two authentication methods for the client.
+    Internal use only. For more information on the two different authentication
+    methods, refer to the documentation for the `Client` class.
+    """
+
+    DATABASE_TOKEN = 0
+    """Authentication with the database token."""
+    JWT = 1
+    """Authentication with user credentials."""
+
+
+def jwt_only(func):
+    """
+    Decorator for operations that can only be executed with a JWT token
+    (authenticated via login credentials). If a database token is used,
+    `TokenAuthNotAllowedError` is thrown.
+    """
+
+    def wrapper(self, *args, **kwargs):
+        if self._auth_method is not AuthMethod.JWT:
+            raise JWTAuthRequiredError(func.__name__)
+        return func(self, *args, **kwargs)
+    return wrapper
 
 
 class Client:
@@ -190,6 +233,7 @@ class Client:
         self._email = email
         self._password = password
         self._session: aiohttp.ClientSession = aiohttp.ClientSession()
+        self._auth_method = AuthMethod.DATABASE_TOKEN if token else AuthMethod.JWT
         # Cache is only accessed by __header() method.
         self.__headers_cache: Optional[dict[str, str]] = None
 
@@ -556,6 +600,30 @@ class Client:
             CONTENT_TYPE_JSON,
             None,
             {"items": row_id},
+        )
+
+    @jwt_only
+    async def list_database_tables(self, database_id: int) -> DatabaseTablesResponse:
+        """
+        Lists all the tables that are in the database related to the database
+        given by it's ID. Please note that this method only works when access is
+        through a JWT token, meaning login credentials are used for
+        authentication. Additionally, the account being used must have access to
+        the database/workspace.
+
+        Args:
+            database_id (int): The ID of the database from which one wants to
+                retrieve a listing of all tables. 
+        """
+        return await self._typed_request(
+            "get",
+            _url_join(
+                self._url,
+                API_PREFIX,
+                "database/tables/database",
+                str(database_id),
+            ),
+            DatabaseTablesResponse,
         )
 
     async def close(self):

@@ -139,7 +139,7 @@ client.close()
 ```
 
 
-### Create Table Row
+### Create Table Row(s)
 
 ToDo.
 
@@ -149,14 +149,16 @@ ToDo.
 ToDo.
 
 
-### Delete Table Row
+### Delete Table Row(s)
 
 ToDo.
 
 
 ### Create Database Tables
 
-ToDo.
+ToDo: Single.
+
+ToDo: Batch.
 
 
 ### List Tables in Database

@@ -33,6 +33,8 @@ def _list_to_str(items: list[str]) -> str:
 
 T = TypeVar("T", bound=Union[BaseModel, RootModel])
 
+A = TypeVar("A")
+
 
 class JsonSerializable(Protocol):
     @classmethod
@@ -136,6 +138,14 @@ class FieldResponse(RootModel[list[FieldItem]]):
     The response for the list field call. Contains all fields of a table.
     """
     root: list[FieldItem]
+
+
+class BatchResponse(BaseModel, Generic[A]):
+    """
+    Response for batch mode. The results of a batch call are encapsulated in
+    this response.
+    """
+    items: list[A]
 
 
 class ErrorResponse(BaseModel):
@@ -448,9 +458,6 @@ class Client:
             model,
             params={"user_field_names": "true" if user_field_names else "false"}
         )
-        if not rsl:
-            raise ValueError("result shouldn't be None")
-        return rsl
 
     async def create_row(
         self,
@@ -501,6 +508,74 @@ class Client:
                 str(table_id),
             ),
             type(data) if not isinstance(data, dict) else MinimalRow,
+            CONTENT_TYPE_JSON,
+            params,
+            json,
+        )
+
+    async def create_rows(
+        self,
+        table_id: int,
+        data: Union[list[T], list[dict[str, Any]]],
+        user_field_names: bool,
+        before: Optional[int] = None,
+    ) -> Union[BatchResponse[T], BatchResponse[MinimalRow]]:
+        """
+        Creates one or multiple new row(w) in the table with the given ID using
+        Baserow's batch functionality. The data can be provided either as a list
+        of dictionaries or as a Pydantic models. Please note that this method
+        does not check whether the fields provided with `data` actually exist.
+
+        The return value depends on the `data` parameter: If a Pydantic model is
+        passed, the return value is an instance of this model with the values as
+        they are in the newly created row. If any arbitrary dictionary is
+        passed, `MinimalRow` is returned, which contains only the ID field.
+
+        If the given list is empty, no call is executed; instead, an empty
+        response is returned.
+
+        Args:
+            table_id (int): The ID of the table where the new row should be
+                created.
+            data (Union[list[T], list[dict[str, Any]]]): The data of the new
+                row.
+            user_field_names (bool): When set to true, the fields in the
+                provided data parameter are named according to their field
+                names. Otherwise, the unique IDs of the fields will be used.
+            before (Optional[int], optional):  If provided then the newly
+                created row will be positioned before the row with the provided
+                id. 
+        """
+        if len(data) == 0:
+            return BatchResponse(items=[])
+        params: dict[str, str] = {
+            "user_field_names": "true" if user_field_names else "false",
+        }
+        if before is not None:
+            params["before"] = str(before)
+        if len(data) == 0:
+            raise ValueError("data parameter cannot be empty list")
+        if not isinstance(data[0], dict):
+            result_type = BatchResponse[type(data[0])]
+        else:
+            result_type = BatchResponse[MinimalRow]
+        items: list[dict[str, Any]] = []
+        for item in data:
+            if not isinstance(item, dict):
+                items.append(item.model_dump(by_alias=True))
+            else:
+                items.append(item)
+        json = {"items": items}
+        return await self._typed_request(
+            "post",
+            _url_join(
+                self._url,
+                API_PREFIX,
+                "database/rows/table",
+                str(table_id),
+                "batch",
+            ),
+            result_type,
             CONTENT_TYPE_JSON,
             params,
             json,
@@ -710,7 +785,7 @@ class Client:
         result_type: Optional[Type[T]],
         headers: Optional[dict[str, str]] = None,
         params: Optional[dict[str, str]] = None,
-        json: Optional[dict[str, str]] = None,
+        json: Optional[dict[str, Any]] = None,
         use_default_headers: bool = True,
     ) -> T:
         """

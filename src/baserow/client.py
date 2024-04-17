@@ -516,6 +516,48 @@ class Client:
             json
         )
 
+    async def delete_row(
+        self,
+        table_id: int,
+        row_id: Union[int, list[int]],
+    ):
+        """
+        Deletes a row with the given ID in the table with the given ID. It's
+        also possible to delete more than one row simultaneously. For this, a
+        list of IDs can be passed using the row_id parameter.
+
+        Args:
+            table_id (int): The ID of the table where the row should be deleted.
+            row_id (Union[int, list[int]]): The ID(s) of the row(s) which should
+                be deleted.
+        """
+        if isinstance(row_id, int):
+            return await self._request(
+                "delete",
+                _url_join(
+                    self._url,
+                    API_PREFIX,
+                    "database/rows/table",
+                    str(table_id),
+                    str(row_id),
+                ),
+                None,
+            )
+        return await self._request(
+            "post",
+            _url_join(
+                self._url,
+                API_PREFIX,
+                "database/rows/table",
+                str(table_id),
+                "batch-delete",
+            ),
+            None,
+            CONTENT_TYPE_JSON,
+            None,
+            {"items": row_id},
+        )
+
     async def close(self):
         """
         The connection session with the client is terminated. Subsequently, the
@@ -582,7 +624,7 @@ class Client:
         result_type: Optional[Type[T]],
         headers: Optional[dict[str, str]] = None,
         params: Optional[dict[str, str]] = None,
-        json: Optional[dict[str, str]] = None,
+        json: Optional[dict[str, Any]] = None,
         use_default_headers: bool = True,
     ) -> Optional[T]:
         """
@@ -608,6 +650,8 @@ class Client:
             if rsp.status == 400:
                 err = ErrorResponse.model_validate_json(await rsp.text())
                 raise BaserowError(rsp.status, err.error, err.detail)
+            if rsp.status == 204:
+                return None
             if rsp.status != 200:
                 raise UnspecifiedBaserowError(rsp.status, await rsp.text())
             body = await rsp.text()

@@ -116,6 +116,10 @@ print(f"Total persons: {total_count}, persons called Dave: {dave_count}")
 client.close()
 ```
 
+### List Table Fields
+
+ToDo.
+
 
 ### List Table Rows
 
@@ -130,4 +134,26 @@ client.close()
 ```
 
 
-### Singleton
+### Create Table Row
+
+ToDo.
+
+
+### Update Table Row
+
+ToDo.
+
+
+### Delete Table Row
+
+ToDo.
+
+
+### List Tables in Database
+
+ToDo.
+
+
+### Create Table Fields
+
+ToDo.

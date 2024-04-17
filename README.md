@@ -65,6 +65,10 @@ client = Client("baserow.example.com", token="<API-TOKEN>")
 
 # With user email and password.
 client = Client("baserow.example.com", email="baserow.user@example.com", password="<PASSWORD>")
+
+# Usage example.
+table_id = 23
+total_count = await client.table_row_count(table_id)
 ```
 
 ### Singleton/Global Client
@@ -106,9 +110,10 @@ from baserow import Client, AndFilter
 
 client = Client("baserow.example.com", token="<API-TOKEN>")
 
-total_count = await client.table_row_count(1000)
+table_id = 23
+total_count = await client.table_row_count(table_id)
 dave_count = await client.table_row_count(
-    1000,
+    table_id,
     filter=AndFilter().contains("Name", "Dave"),
 )
 print(f"Total persons: {total_count}, persons called Dave: {dave_count}")
@@ -145,6 +150,11 @@ ToDo.
 
 
 ### Delete Table Row
+
+ToDo.
+
+
+### Create Database Tables
 
 ToDo.
 

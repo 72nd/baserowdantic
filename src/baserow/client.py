@@ -89,20 +89,17 @@ class FieldType(str, enum.Enum):
     PASSWORD = "password"
 
 
-class DatabaseTable(BaseModel):
-    """
-    Item within the `DatabaseTableResponse`. Describes a table within a database
-    in Baserow.
-    """
+class DatabaseTableResponse(BaseModel):
+    """Describes a table within a database in Baserow."""
     id: int
     name: str
     order: int
     database_id: int
 
 
-class DatabaseTablesResponse(RootModel[list[DatabaseTable]]):
+class DatabaseTablesResponse(RootModel[list[DatabaseTableResponse]]):
     """Contains all tables for a database in Baserow."""
-    root: list[DatabaseTable]
+    root: list[DatabaseTableResponse]
 
 
 class FieldItem(BaseModel):
@@ -603,7 +600,10 @@ class Client:
         )
 
     @jwt_only
-    async def list_database_tables(self, database_id: int) -> DatabaseTablesResponse:
+    async def list_database_tables(
+        self,
+        database_id: int,
+    ) -> DatabaseTablesResponse:
         """
         Lists all the tables that are in the database related to the database
         given by it's ID. Please note that this method only works when access is
@@ -624,6 +624,52 @@ class Client:
                 str(database_id),
             ),
             DatabaseTablesResponse,
+        )
+
+    @jwt_only
+    async def create_database_table(
+        self,
+        database_id: int,
+        name: str,
+        client_session_id: Optional[str] = None,
+        client_undo_redo_action_group_id: Optional[str] = None,
+    ):
+        """
+        Creates synchronously a new table with the given for the database
+        related to the provided database_id parameter.
+
+        Args:
+            database_id (int): The ID of the database in which the new table
+                should be created.
+            name (str): Human readable name for the new table.
+            client_session_id (str, optional): An optional UUID that marks
+                the action performed by this request as having occurred in a
+                particular client session. Then using the undo/redo endpoints
+                with the same ClientSessionId header this action can be
+                undone/redone.
+            client_undo_redo_action_group_id (str, optional): An optional UUID
+                that marks the action performed by this request as having
+                occurred in a particular action group.Then calling the undo/redo
+                endpoint with the same ClientSessionId header, all the actions
+                belonging to the same action group can be undone/redone together
+                in a single API call.
+        """
+        headers: dict[str, str] = CONTENT_TYPE_JSON.copy()
+        if client_session_id:
+            headers["ClientSessionId"] = client_session_id
+        if client_undo_redo_action_group_id:
+            headers["ClientUndoRedoActionGroupId"] = client_undo_redo_action_group_id
+        return await self._typed_request(
+            "post",
+            _url_join(
+                self._url,
+                API_PREFIX,
+                "database/tables/database",
+                str(database_id),
+            ),
+            DatabaseTableResponse,
+            headers=headers,
+            json={"name": name},
         )
 
     async def close(self):

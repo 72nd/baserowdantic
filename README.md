@@ -104,7 +104,7 @@ This method returns the number of rows or records in a Baserow table. Filters ca
 ```python
 from baserow import Client, AndFilter
 
-client = Client("baserow.example.com", "<API-TOKEN>")
+client = Client("baserow.example.com", token="<API-TOKEN>")
 
 total_count = await client.table_row_count(1000)
 dave_count = await client.table_row_count(

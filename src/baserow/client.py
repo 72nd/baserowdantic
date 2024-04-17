@@ -48,6 +48,11 @@ class RowResponse(BaseModel, Generic[T]):
     results: list[T]
 
 
+class MinimalRow(BaseModel):
+    """The minimal result items of a `RowResponse`."""
+    id: int
+
+
 class TokenResponse(BaseModel):
     """Result of an authentication token call."""
     user: Any
@@ -412,12 +417,17 @@ class Client:
         data: Union[T, dict[str, Any]],
         user_field_names: bool,
         before: Optional[int] = None,
-    ):
+    ) -> Union[T, MinimalRow]:
         """
         Creates a new row in the table with the given ID. The data can be
         provided either as a dictionary or as a Pydantic model. Please note that
-        this method does not check whether the fields passed into the table
+        this method does not check whether the fields provided with `data`
         actually exist.
+
+        The return value depends on the `data` parameter: If a Pydantic model is
+        passed, the return value is an instance of this model with the values as
+        they are in the newly created row. If any arbitrary dictionary is
+        passed, `MinimalRow` is returned, which contains only the ID field.
 
         Args:
             table_id (int): The ID of the table where the new row should be
@@ -441,7 +451,7 @@ class Client:
         else:
             json = data
 
-        await self._request(
+        return await self._typed_request(
             "post",
             _url_join(
                 self._url,
@@ -449,10 +459,61 @@ class Client:
                 "database/rows/table",
                 str(table_id),
             ),
-            None,
+            type(data) if not isinstance(data, dict) else MinimalRow,
             CONTENT_TYPE_JSON,
             params,
             json,
+        )
+
+    async def update_row(
+        self,
+        table_id: int,
+        row_id: int,
+        data: Union[T, dict[str, Any]],
+        user_field_names: bool,
+    ) -> Union[T, MinimalRow]:
+        """ 
+        Updates a row by it's ID in the table with the given ID. The data can be
+        provided either as a dictionary or as a Pydantic model. Please note that
+        this method does not check whether the fields provided with `data`
+        actually exist.
+
+        The return value depends on the `data` parameter: If a Pydantic model is
+        passed, the return value is an instance of this model with the values as
+        they are in the newly created row. If any arbitrary dictionary is
+        passed, `MinimalRow` is returned, which contains only the ID field.
+
+        Args:
+            table_id (int): The ID of the table where the new row should be
+                created.
+            row_id (int): The ID of the row which should be updated.
+            data (Union[T, dict[str, Any]]): The data of the new row.
+            user_field_names (bool): When set to true, the fields in the
+                provided data parameter are named according to their field
+                names. Otherwise, the unique IDs of the fields will be used.
+        """
+        params: dict[str, str] = {
+            "user_field_names": "true" if user_field_names else "false",
+        }
+
+        if not isinstance(data, dict):
+            json = data.model_dump(by_alias=True)
+        else:
+            json = data
+
+        return await self._typed_request(
+            "patch",
+            _url_join(
+                self._url,
+                API_PREFIX,
+                "database/rows/table",
+                str(table_id),
+                str(row_id),
+            ),
+            type(data) if not isinstance(data, dict) else MinimalRow,
+            CONTENT_TYPE_JSON,
+            params,
+            json
         )
 
     async def close(self):

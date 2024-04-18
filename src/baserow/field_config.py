@@ -5,7 +5,6 @@ cannot be used to parse/validate data coming from Baserow.
 
 
 import enum
-from os import fchdir
 import random
 
 from typing import Annotated, Literal, Optional, Union
@@ -51,6 +50,7 @@ class FieldConfigBase(BaseModel):
     Indicates whether the field is a read only field. If true, it's not possible
     to update the cell value. 
     """
+    relate_fields: Optional[list[dict]] = None
 
 
 class TextFieldConfig(FieldConfigBase):
@@ -58,7 +58,7 @@ class TextFieldConfig(FieldConfigBase):
     A single line text field is a type of field that allows you to input short
     and unique pieces of text into your table.
     """
-    type: Literal["text"]
+    type: Literal["text"] = "text"
     text_default: str = Field(default="", max_length=255)
 
 
@@ -66,13 +66,13 @@ class LongTextFieldConfig(FieldConfigBase):
     """
     A long text field can contain long paragraphs or multiple lines of text.
     """
-    type: Literal["long_text"]
+    type: Literal["long_text"] = "long_text"
     long_text_enable_rich_text: bool = False
 
 
 class URLFieldConfig(FieldConfigBase):
     """The URL field holds a single URL."""
-    type: Literal["url"]
+    type: Literal["url"] = "url"
 
 
 class EMailFieldConfig(FieldConfigBase):
@@ -82,12 +82,12 @@ class EMailFieldConfig(FieldConfigBase):
     inside of an email field, your computer's default email client will launch
     with the clicked email's To: address in the To: field.
     """
-    type: Literal["email"]
+    type: Literal["email"] = "email"
 
 
 class NumberFieldConfig(FieldConfigBase):
     """The number field is a field type that holds numerical values."""
-    type: Literal["number"]
+    type: Literal["number"] = "number"
     number_decimal_places: int = 0
     """The amount of digits allowed after the point."""
     number_negative: bool = True
@@ -108,7 +108,7 @@ class RatingFieldConfig(FieldConfigBase):
     A rating field is used to rate your rows in order to rank or evaluate their
     quality.
     """
-    type: Literal["rating"]
+    type: Literal["rating"] = "rating"
     max_value: int = Field(default=5, ge=1, le=10)
     """Maximum value the rating can take."""
     color: str = ""
@@ -121,7 +121,7 @@ class BooleanFieldConfig(FieldConfigBase):
     """
     The boolean field represents information in a binary true/false format.
     """
-    type: Literal["boolean"]
+    type: Literal["boolean"] = "boolean"
 
 
 class DateFormat(str, enum.Enum):
@@ -162,7 +162,7 @@ class DateFieldConfig(GenericDateFieldConfig):
     """
     A UTC offset in minutes to add to all the field datetimes values.
     """
-    type: Literal["date"]
+    type: Literal["date"] = "date"
 
 
 class LastModifiedFieldConfig(GenericDateFieldConfig):
@@ -170,7 +170,7 @@ class LastModifiedFieldConfig(GenericDateFieldConfig):
     The last modified field type returns the most recent date and time that a
     row was modified. 
     """
-    type: Literal["last_modified"]
+    type: Literal["last_modified"] = "last_modified"
 
 
 class LastModifiedByFieldConfig(FieldConfigBase):
@@ -178,7 +178,7 @@ class LastModifiedByFieldConfig(FieldConfigBase):
     Track decisions and actions to specific individuals for historical reference
     or follow-up.
     """
-    type: Literal["last_modified_by"]
+    type: Literal["last_modified_by"] = "last_modified_by"
 
 
 class CreatedOnFieldConfig(GenericDateFieldConfig):
@@ -186,7 +186,7 @@ class CreatedOnFieldConfig(GenericDateFieldConfig):
     The created on field type will automatically show the date and time that a
     row was created by a user.
     """
-    type: Literal["created_on"]
+    type: Literal["created_on"] = "created_on"
 
 
 class CreatedByFieldConfig(FieldConfigBase):
@@ -194,7 +194,7 @@ class CreatedByFieldConfig(FieldConfigBase):
     Automatically tracks and displays the name of the collaborator who created
     each row within a table.
     """
-    type: Literal["created_by"]
+    type: Literal["created_by"] = "created_by"
 
 
 class DurationFormat(str, enum.Enum):
@@ -213,7 +213,7 @@ class DurationFieldConfig(FieldConfigBase):
     """
     Stores time durations measured in hours, minutes, seconds, or milliseconds.
     """
-    type: Literal["duration"]
+    type: Literal["duration"] = "duration"
     duration_format: DurationFormat = DurationFormat.HOURS_MINUTES_SECONDS
     """Possible display formats."""
 
@@ -223,7 +223,7 @@ class LinkFieldConfig(FieldConfigBase):
     A link to table field creates a link between two existing tables by
     connecting data across tables with linked rows.
     """
-    type: Literal["link_row"]
+    type: Literal["link_row"] = "link_row"
     link_row_table_id: Optional[int] = None
     """The id of the linked table."""
     has_related_field: bool = False
@@ -234,7 +234,7 @@ class FileFieldConfig(FieldConfigBase):
     A file field allows you to easily upload one or more files from your device
     or from a URL.
     """
-    type: Literal["file"]
+    type: Literal["file"] = "file"
 
 
 class SelectEntryConfig(BaseModel):
@@ -249,7 +249,7 @@ class SingleSelectFieldConfig(FieldConfigBase):
     The single select field type is a field type containing defined options to
     choose only one option from a set of options.
     """
-    type: Literal["single_select"]
+    type: Literal["single_select"] = "single_select"
     select_options: list[SelectEntryConfig]
 
 
@@ -258,7 +258,7 @@ class MultipleSelectFieldConfig(FieldConfigBase):
     A multiple select field contains a list of tags to choose multiple options
     from a set of options. 
     """
-    type: Literal["multiple_select"]
+    type: Literal["multiple_select"] = "multiple_select"
 
 
 class PhoneNumberFieldConfig(FieldConfigBase):
@@ -266,7 +266,7 @@ class PhoneNumberFieldConfig(FieldConfigBase):
     The phone number field will format a string of numbers as a phone number, in
     the form (XXX) XXX-XXXX.
     """
-    type: Literal["phone_number"]
+    type: Literal["phone_number"] = "phone_number"
 
 
 class FormulaType(str, enum.Enum):
@@ -323,7 +323,7 @@ class FormulaFieldConfig(GenericFormulaFieldConfig):
     A value in each row can be calculated using a formula based on values in
     cells in the same row.
     """
-    type: Literal["formula"]
+    type: Literal["formula"] = "formula"
 
 
 class CountFieldConfig(GenericFormulaFieldConfig):
@@ -331,32 +331,32 @@ class CountFieldConfig(GenericFormulaFieldConfig):
     The count field will automatically count the number of rows linked to a
     particular row in your database.
     """
-    type: Literal["count"]
+    type: Literal["count"] = "count"
 
 
 class RollupFieldConfig(GenericFormulaFieldConfig):
     """Aggregate data and gain valuable insights from linked tables."""
-    type: Literal["rollup"]
+    type: Literal["rollup"] = "rollup"
 
 
 class LookupFieldConfig(GenericFormulaFieldConfig):
     """
     You can look for a specific field in a linked row using a lookup field.
     """
-    type: Literal["lookup"]
+    type: Literal["lookup"] = "lookup"
 
 
 class MultipleCollaboratorsFieldConfig(FieldConfigBase):
     """
     Assign collaborators by selecting names from a list of workspace members.
     """
-    type: Literal["multiple_collaborators"]
+    type: Literal["multiple_collaborators"] = "multiple_collaborators"
     notify_user_when_added: bool = False
 
 
 class UUIDFieldConfig(FieldConfigBase):
     """Create and work with unique record identifiers within a table."""
-    type: Literal["uuid"]
+    type: Literal["uuid"] = "uuid"
 
 
 class AutonumberFieldConfig(FieldConfigBase):
@@ -364,7 +364,7 @@ class AutonumberFieldConfig(FieldConfigBase):
     Automatically generates unique and sequential numbers for each record in a
     table.
     """
-    type: Literal["autonumber"]
+    type: Literal["autonumber"] = "autonumber"
     view: Optional[int] = None
     """The id of the view to use for the initial ordering."""
 
@@ -374,14 +374,14 @@ class PasswordFieldConfig(FieldConfigBase):
     Ensure robust security measures for your data. Currently only used for the
     application builder.
     """
-    type: Literal["password"]
+    type: Literal["password"] = "password"
 
 
 class AIFieldConfig(FieldConfigBase):
     """
     Generate creative briefs, summarize information, and more.
     """
-    type: Literal["ai"]
+    type: Literal["ai"] = "ai"
     ai_generative_ai_type: Optional[str] = Field(default=None, max_length=32)
     ai_generative_ai_model: Optional[str] = Field(default=None, max_length=32)
     ai_prompt: str = ""

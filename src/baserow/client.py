@@ -12,7 +12,7 @@ from pydantic import BaseModel, Field, RootModel
 
 from baserow.error import BaserowError, JWTAuthRequiredError, PackageClientAlreadyDefinedError, SingletonAlreadyConfiguredError, UnspecifiedBaserowError
 from baserow.field import FieldType
-from baserow.field_config import FieldConfig
+from baserow.field_config import FieldConfig, FieldConfigType
 from baserow.filter import Filter
 
 
@@ -689,6 +689,49 @@ class Client:
             DatabaseTableResponse,
             headers=headers,
             json={"name": name},
+        )
+
+    async def create_database_table_field(
+        self,
+        table_id: int,
+        field: FieldConfigType,
+        client_session_id: Optional[str] = None,
+        client_undo_redo_action_group_id: Optional[str] = None,
+    ) -> FieldConfig:
+        """
+        Adds a new field to a table specified by its ID.
+
+        Args:
+            table_id (int): The ID of the table to be altered.
+            field (FieldConfigType): The config of the field to be added.
+            client_session_id (str, optional): An optional UUID that marks
+                the action performed by this request as having occurred in a
+                particular client session. Then using the undo/redo endpoints
+                with the same ClientSessionId header this action can be
+                undone/redone.
+            client_undo_redo_action_group_id (str, optional): An optional UUID
+                that marks the action performed by this request as having
+                occurred in a particular action group.Then calling the undo/redo
+                endpoint with the same ClientSessionId header, all the actions
+                belonging to the same action group can be undone/redone together
+                in a single API call.
+        """
+        headers: dict[str, str] = CONTENT_TYPE_JSON.copy()
+        if client_session_id:
+            headers["ClientSessionId"] = client_session_id
+        if client_undo_redo_action_group_id:
+            headers["ClientUndoRedoActionGroupId"] = client_undo_redo_action_group_id
+        return await self._typed_request(
+            "post",
+            _url_join(
+                self._url,
+                API_PREFIX,
+                "database/fields/table",
+                str(table_id),
+            ),
+            FieldConfig,
+            headers=headers,
+            json=field.model_dump(),
         )
 
     async def close(self):

@@ -123,49 +123,138 @@ client.close()
 
 ### List Table Fields
 
-ToDo.
+This function retrieves the fields (also known as rows) present in a specified table along with their configurations. The return value contains the information in the form of the `FieldConfig` model.
+
+```python
+table_id = 23
+print(await client.list_fields(table_id))
+```
 
 
 ### List Table Rows
 
 The method reads the entries or records of a table in Baserow. It is possible to filter, sort, select one of the pages (Baserow API uses paging), and determine the number (size) of returned records (between 1 to 200). If it is necessary to retrieve all entries of a table, the method list_all_table_rows exists for this purpose. This method should be used with caution, as many API calls to Baserow may be triggered depending on the size of the table.
 
+Setting the `result_type` parameter to a pydantic model the result will be deserialized into the given model. Otherwise a dict will be returned. 
+
 ```python
-from baserow import Client, AndFilter
+table_id = 23
 
-rsl 
+# Get the first 20 person of the table as a dict.
+first_20_person = await client.list_table_rows(table_id, True, size=20)
 
-client.close()
+# Get all person where the field name contains the substring »Dave« or »Ann«.
+ann_dave_person = await client.list_table_rows(
+  table_id,
+  True,
+  filter=OrFilter().contains("Name", "Dave").contains("Name", "Ann"),
+)
+
+# Get all entries of the table. This can take a long time.
+all_person = await client.list_all_table_rows(table_id, True, result_type=Person)
 ```
 
 
 ### Create Table Row(s)
 
-ToDo.
+This method facilitates the creation of one or more records in a specific table, identified by its ID. Data for the records can be provided either as a dictionary or as an instance of a BaseModel. This flexibility allows users to choose the format that best suits their needs, whether it's a simple dictionary for less complex data or a BaseModel for more structured and type-safe data handling.
+
+To create multiple records at once, you can use the create_rows() method. This uses Baserow's batch functionality and thus minimizes the number of API calls required to one.
+
+```python
+table_id = 23
+# Create on new row.
+client.create_row(table_id, {"Name": "Ann"}, True)
+
+# Create multiple rows in one go.
+client.create_rows(
+  table_id,
+  [
+    Person(name="Tom", age=23),
+    Person(name="Anna", age=42),
+  ],
+  True,
+)
+```
 
 
 ### Update Table Row
 
-ToDo.
+This method updates a specific row (entry) within a table. Both the table and the row are identified by their unique IDs. The data for the update can be provided either as a Pydantic model or as a dictionary.
 
+- Using a Dictionary: More commonly, a dictionary is used for targeted updates, allowing specific fields within the row to be modified. This method makes more sense in most cases where only certain fields need adjustment, rather than a full update.
+- Using a Pydantic Model: When a Pydantic model is used, all values present within the model are applied to the row. This approach is comprehensive, as it updates all fields represented in the model.
+
+```python
+table_id = 23
+row_id = 42
+
+# Change the name and age of the Row with ID 42 within the table with the ID 23.
+rsl = await client.update_row(
+  table_id,
+  row_id,
+  {"Name": "Thomas Niederaichbach", "Age": 29},
+  True,
+)
+print(rsl)
+```
+
+The method returns the complete updated row.
 
 ### Delete Table Row(s)
 
-ToDo.
+This method is used to delete one or more rows within a specified table. Both the table and the row are identified by their unique IDs.
+
+```python
+table_id = 23
+
+# Delete the row with ID 23
+await client.delete_row(table_id, 23)
+
+# Delete rows with ID 29 and 31 in one go.
+await client.delete_row(table_id, [29, 31])
+```
+
+On success the method returns `None` otherwise an exception will be thrown.
 
 
 ### Create Database Tables
 
-ToDo: Single.
+This method facilitates the creation of a new table within a specified database, identified by the unique ID of the database. A human-readable name for the table must be provided. It's also possible to integrate the table creation action into the undo tree of a client session or an action group. This can be accomplished using optional parameters provided in the method.
 
-ToDo: Batch.
+For additional details on these optional parameters and other functionalities, please refer to the code documentation of this package and the Baserow documentation.
 
+```python
+database_id = 19
+
+# Create a new table with the name »Cars« in the database with the ID 19.
+await client.create_database_table(database_id, "Cars")
+```
 
 ### List Tables in Database
 
-ToDo.
+This method retrieves a list of all tables within a specified database. The result includes essential information about each table, such as its ID and name.
+
+```python
+database_id = 19
+
+# List all tables within the database with the ID 19.
+rsl = await client.list_database_table(database_id)
+print(rsl)
+```
 
 
 ### Create Table Fields
 
-ToDo.
+This method is used to add a new field to an existing table, which is identified by its ID. Each call to this method can add one field. You can use any field configuration that is part of the FieldConfigType.
+
+
+```python
+table_id = 23
+
+# Adds a new text field (»row«) to the person table with the name pronoun.
+client.create_database_field(
+  table_id,
+  TextFieldConfig(name"Pronoun")
+)
+```

@@ -11,6 +11,7 @@ import aiohttp
 from pydantic import BaseModel, RootModel
 
 from baserow.error import BaserowError, JWTAuthRequiredError, PackageClientAlreadyDefinedError, SingletonAlreadyConfiguredError, UnspecifiedBaserowError
+from baserow.field import FieldType
 from baserow.filter import Filter
 
 
@@ -60,35 +61,6 @@ class TokenResponse(BaseModel):
     user: Any
     access_token: str
     refresh_token: str
-
-
-class FieldType(str, enum.Enum):
-    """The various types that Baserow fields can have."""
-    TEXT = "text"
-    NUMBER = "number"
-    LONG_TEXT = "long_text"
-    LINK_ROW = "link_row"
-    BOOLEAN = "boolean"
-    DATE = "date"
-    RATING = "rating"
-    LAST_MODIFIED = "last_modified"
-    LAST_MODIFIED_BY = "last_modified_by"
-    CREATED_ON = "created_on"
-    CREATED_BY = "created_by"
-    DURATION = "duration"
-    URL = "url"
-    EMAIL = "email"
-    FILE = "file"
-    SINGLE_SELECT = "single_select"
-    MULTIPLE_SELECT = "multiple_select"
-    PHONE_NUMBER = "phone_number"
-    FORMULA = "formula"
-    ROLLUP = "rollup"
-    LOOKUP = "lookup"
-    MULTIPLE_COLLABORATORS = "multiple_collaborators"
-    UUID = "uuid"
-    AUTONUMBER = "autonumber"
-    PASSWORD = "password"
 
 
 class DatabaseTableResponse(BaseModel):

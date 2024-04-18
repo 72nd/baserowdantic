@@ -23,7 +23,7 @@ def random_color() -> str:
     return f"#{red:02x}{green:02x}{blue:02x}"
 
 
-class FieldConfigBasic(BaseModel):
+class FieldConfigBase(BaseModel):
     """
     Many of the fields (or rows) in Baserow tables have certain properties that
     can be set. These are managed with this class. Each field type implements
@@ -31,9 +31,29 @@ class FieldConfigBasic(BaseModel):
     in a table.
     """
     name: str = Field(max_length=255)
+    """Name of the field."""
+    id: Optional[int] = None
+    """
+    Field primary key. Can be used to generate the database column name by
+    adding field_ prefix.
+    """
+    table_id: Optional[int] = None
+    """Related table id."""
+    order: Optional[int] = None
+    """Field order in table. 0 for the first field."""
+    primary: Optional[bool] = None
+    """
+    Indicates if the field is a primary field. If `True` the field cannot be
+    deleted and the value should represent the whole row.
+    """
+    read_only: Optional[bool] = None
+    """
+    Indicates whether the field is a read only field. If true, it's not possible
+    to update the cell value. 
+    """
 
 
-class TextFieldConfig(FieldConfigBasic):
+class TextFieldConfig(FieldConfigBase):
     """
     A single line text field is a type of field that allows you to input short
     and unique pieces of text into your table.
@@ -42,7 +62,7 @@ class TextFieldConfig(FieldConfigBasic):
     text_default: str = Field(default="", max_length=255)
 
 
-class LongTextFieldConfig(FieldConfigBasic):
+class LongTextFieldConfig(FieldConfigBase):
     """
     A long text field can contain long paragraphs or multiple lines of text.
     """
@@ -50,12 +70,12 @@ class LongTextFieldConfig(FieldConfigBasic):
     long_text_enable_rich_text: bool = False
 
 
-class URLFieldConfig(FieldConfigBasic):
+class URLFieldConfig(FieldConfigBase):
     """The URL field holds a single URL."""
     type: Literal["url"]
 
 
-class EMailFieldConfig(FieldConfigBasic):
+class EMailFieldConfig(FieldConfigBase):
     """
     An email field is a type of field that allows input of a single email
     address in a cell in the right format. When you click on an email address
@@ -65,7 +85,7 @@ class EMailFieldConfig(FieldConfigBasic):
     type: Literal["email"]
 
 
-class NumberFieldConfig(FieldConfigBasic):
+class NumberFieldConfig(FieldConfigBase):
     """The number field is a field type that holds numerical values."""
     type: Literal["number"]
     number_decimal_places: int = 0
@@ -83,7 +103,7 @@ class RatingStyle(str, enum.Enum):
     SMILE = "smile"
 
 
-class RatingFieldConfig(FieldConfigBasic):
+class RatingFieldConfig(FieldConfigBase):
     """
     A rating field is used to rate your rows in order to rank or evaluate their
     quality.
@@ -97,7 +117,7 @@ class RatingFieldConfig(FieldConfigBasic):
     """Style of rating symbols."""
 
 
-class BooleanFieldConfig(FieldConfigBasic):
+class BooleanFieldConfig(FieldConfigBase):
     """
     The boolean field represents information in a binary true/false format.
     """
@@ -120,7 +140,7 @@ class TimeFormat(int, enum.Enum):
     HOUR_12 = 12
 
 
-class GenericDateFieldConfig(FieldConfigBasic):
+class GenericDateFieldConfig(FieldConfigBase):
     """
     Generic date field config for all field types handling date(-time) values.
     """
@@ -153,7 +173,7 @@ class LastModifiedFieldConfig(GenericDateFieldConfig):
     type: Literal["last_modified"]
 
 
-class LastModifiedByFieldConfig(FieldConfigBasic):
+class LastModifiedByFieldConfig(FieldConfigBase):
     """
     Track decisions and actions to specific individuals for historical reference
     or follow-up.
@@ -169,7 +189,7 @@ class CreatedOnFieldConfig(GenericDateFieldConfig):
     type: Literal["created_on"]
 
 
-class CreatedByFieldConfig(FieldConfigBasic):
+class CreatedByFieldConfig(FieldConfigBase):
     """
     Automatically tracks and displays the name of the collaborator who created
     each row within a table.
@@ -189,7 +209,7 @@ class DurationFormat(str, enum.Enum):
     DAYS_HOURS_MINUTES_SECONDS = "d h:mm:ss"
 
 
-class DurationFieldConfig(FieldConfigBasic):
+class DurationFieldConfig(FieldConfigBase):
     """
     Stores time durations measured in hours, minutes, seconds, or milliseconds.
     """
@@ -198,7 +218,7 @@ class DurationFieldConfig(FieldConfigBasic):
     """Possible display formats."""
 
 
-class LinkFieldConfig(FieldConfigBasic):
+class LinkFieldConfig(FieldConfigBase):
     """
     A link to table field creates a link between two existing tables by
     connecting data across tables with linked rows.
@@ -209,7 +229,7 @@ class LinkFieldConfig(FieldConfigBasic):
     has_related_field: bool = False
 
 
-class FileFieldConfig(FieldConfigBasic):
+class FileFieldConfig(FieldConfigBase):
     """
     A file field allows you to easily upload one or more files from your device
     or from a URL.
@@ -224,7 +244,7 @@ class SelectEntryConfig(BaseModel):
     color: str = Field(max_length=255, default_factory=random_color)
 
 
-class SingleSelectFieldConfig(FieldConfigBasic):
+class SingleSelectFieldConfig(FieldConfigBase):
     """
     The single select field type is a field type containing defined options to
     choose only one option from a set of options.
@@ -233,7 +253,7 @@ class SingleSelectFieldConfig(FieldConfigBasic):
     select_options: list[SelectEntryConfig]
 
 
-class MultipleSelectFieldConfig(FieldConfigBasic):
+class MultipleSelectFieldConfig(FieldConfigBase):
     """
     A multiple select field contains a list of tags to choose multiple options
     from a set of options. 
@@ -241,7 +261,7 @@ class MultipleSelectFieldConfig(FieldConfigBasic):
     type: Literal["multiple_select"]
 
 
-class PhoneNumberFieldConfig(FieldConfigBasic):
+class PhoneNumberFieldConfig(FieldConfigBase):
     """
     The phone number field will format a string of numbers as a phone number, in
     the form (XXX) XXX-XXXX.
@@ -267,32 +287,32 @@ class FormulaType(str, enum.Enum):
     SINGLE_FILE = "single_file"
 
 
-class GenericFormulaFieldConfig(FieldConfigBasic):
+class GenericFormulaFieldConfig(FieldConfigBase):
     """
     Generic type for fields which can contain all multiple fields types.
     """
-    date_show_tzinfo: bool = False
+    date_show_tzinfo: Optional[bool] = False
     """Indicates if the timezone should be shown."""
-    number_decimal_places: int = 0
+    number_decimal_places: Optional[int] = 0
     """The amount of digits allowed after the point."""
-    duration_format: DurationFormat = DurationFormat.HOURS_MINUTES_SECONDS
+    duration_format: Optional[DurationFormat] = DurationFormat.HOURS_MINUTES_SECONDS
     """Possible display formats."""
     date_force_timezone: Optional[str] = Field(default=None, max_length=255)
     """Force a timezone for the field overriding user profile settings."""
-    array_formula_type: Optional[list[FormulaType]]
+    array_formula_type: Optional[FormulaType] = None
     """
     The type of the values within the array if `formula_type` is set to array.
     Please note that the type array is not allowed. As an array within an array
     is not possible in Baserow.
     """
     error: Optional[str] = None
-    date_format: DateFormat = DateFormat.ISO
+    date_format: Optional[DateFormat] = DateFormat.ISO
     """EU, US or ISO."""
-    date_include_time: bool = False
+    date_include_time: Optional[bool] = False
     """Indicates if the field also includes a time."""
-    date_time_format: TimeFormat = TimeFormat.HOUR_24
+    date_time_format: Optional[TimeFormat] = TimeFormat.HOUR_24
     """12 (am/pm) or 24 hour format."""
-    formula: str
+    formula: Optional[str] = None
     """The actual formula."""
     formula_type: FormulaType
     """Type of the formula result."""
@@ -326,7 +346,7 @@ class LookupFieldConfig(GenericFormulaFieldConfig):
     type: Literal["lookup"]
 
 
-class MultipleCollaboratorsFieldConfig(FieldConfigBasic):
+class MultipleCollaboratorsFieldConfig(FieldConfigBase):
     """
     Assign collaborators by selecting names from a list of workspace members.
     """
@@ -334,12 +354,12 @@ class MultipleCollaboratorsFieldConfig(FieldConfigBasic):
     notify_user_when_added: bool = False
 
 
-class UUIDFieldConfig(FieldConfigBasic):
+class UUIDFieldConfig(FieldConfigBase):
     """Create and work with unique record identifiers within a table."""
     type: Literal["uuid"]
 
 
-class AutonumberFieldConfig(FieldConfigBasic):
+class AutonumberFieldConfig(FieldConfigBase):
     """
     Automatically generates unique and sequential numbers for each record in a
     table.
@@ -349,7 +369,7 @@ class AutonumberFieldConfig(FieldConfigBasic):
     """The id of the view to use for the initial ordering."""
 
 
-class PasswordFieldConfig(FieldConfigBasic):
+class PasswordFieldConfig(FieldConfigBase):
     """
     Ensure robust security measures for your data. Currently only used for the
     application builder.
@@ -357,7 +377,7 @@ class PasswordFieldConfig(FieldConfigBasic):
     type: Literal["password"]
 
 
-class AIFieldConfig(FieldConfigBasic):
+class AIFieldConfig(FieldConfigBase):
     """
     Generate creative briefs, summarize information, and more.
     """
@@ -371,7 +391,32 @@ class AIFieldConfig(FieldConfigBasic):
 FieldConfigType = Annotated[
     Union[
         TextFieldConfig,
-        LongTextFieldConfig
+        LongTextFieldConfig,
+        URLFieldConfig,
+        EMailFieldConfig,
+        NumberFieldConfig,
+        RatingFieldConfig,
+        BooleanFieldConfig,
+        DateFieldConfig,
+        LastModifiedFieldConfig,
+        LastModifiedByFieldConfig,
+        CreatedOnFieldConfig,
+        CreatedByFieldConfig,
+        DurationFieldConfig,
+        LinkFieldConfig,
+        FileFieldConfig,
+        SingleSelectFieldConfig,
+        MultipleSelectFieldConfig,
+        PhoneNumberFieldConfig,
+        FormulaFieldConfig,
+        CountFieldConfig,
+        RollupFieldConfig,
+        LookupFieldConfig,
+        MultipleCollaboratorsFieldConfig,
+        UUIDFieldConfig,
+        AutonumberFieldConfig,
+        PasswordFieldConfig,
+        AIFieldConfig,
     ],
     Field(discriminator="type"),
 ]

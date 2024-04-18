@@ -8,10 +8,11 @@ import enum
 from re import I
 from typing import Any, Generic, Optional, Protocol, Type, TypeVar, Union
 import aiohttp
-from pydantic import BaseModel, RootModel
+from pydantic import BaseModel, Field, RootModel
 
 from baserow.error import BaserowError, JWTAuthRequiredError, PackageClientAlreadyDefinedError, SingletonAlreadyConfiguredError, UnspecifiedBaserowError
 from baserow.field import FieldType
+from baserow.field_config import FieldConfig
 from baserow.filter import Filter
 
 
@@ -76,40 +77,11 @@ class DatabaseTablesResponse(RootModel[list[DatabaseTableResponse]]):
     root: list[DatabaseTableResponse]
 
 
-class FieldItem(BaseModel):
-    """
-    Describes a field of a table in Baserow.
-    """
-    id: int
-    """
-    Field primary key. Can be used to generate the database column name by
-    adding field_ prefix.
-    """
-    name: str
-    """Field name."""
-    table_id: int
-    """Related table id."""
-    order: int
-    """Field order in table. 0 for the first field."""
-    primary: bool
-    """
-    Indicates if the field is a primary field. If `True` the field cannot be
-    deleted and the value should represent the whole row.
-    """
-    type: FieldType
-    """Type defined for this field."""
-    read_only: bool
-    """
-    Indicates whether the field is a read only field. If true, it's not possible
-    to update the cell value. 
-    """
-
-
-class FieldResponse(RootModel[list[FieldItem]]):
+class FieldResponse(RootModel[list[FieldConfig]]):
     """
     The response for the list field call. Contains all fields of a table.
     """
-    root: list[FieldItem]
+    root: list[FieldConfig]
 
 
 class BatchResponse(BaseModel, Generic[A]):
@@ -817,7 +789,8 @@ class Client:
                 raise UnspecifiedBaserowError(rsp.status, await rsp.text())
             body = await rsp.text()
             if result_type is not None:
-                return result_type.model_validate_json(body)
+                rsl = result_type.model_validate_json(body)
+                return rsl
             return None
 
 

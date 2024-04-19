@@ -3,6 +3,9 @@ This module contains the custom exceptions of the package.
 """
 
 
+from pydantic_core.core_schema import model_field
+
+
 class PackageClientNotConfiguredError(Exception):
     """
     Thrown when the PackageClient is intended to be used but has not been
@@ -33,7 +36,7 @@ class PackageClientAlreadyConfiguredError(Exception):
         return f"attempted to configure the package-wide client with the URL '{self.new_url}', even though it was already configured with the URL '{self.old_url}'"
 
 
-class NoClientAvailable(Exception):
+class NoClientAvailableError(Exception):
     """
     Thrown when a Table instance is not given a client, and the GlobalClient of
     the package is not configured. This would implicitly raise a
@@ -42,7 +45,7 @@ class NoClientAvailable(Exception):
     for this case (when using the ORM-like abstraction).
 
     Args:
-        table_name: Name of the table.
+        table_name (str): Name of the table.
     """
 
     def __init__(self, table_name: str):
@@ -106,6 +109,18 @@ class UnspecifiedBaserowError(Exception):
         return f"Baserow returned an error with status code {self.status_code}: {self.body}"
 
 
-class NoClientError(Exception):
+class InvalidTableConfiguration(Exception):
     """
+    Raised when a Table model is not implemented correctly.
+
+    Args:
+        model_name (str): Name of the model.
+        reason (str): Reason for the exception.
     """
+
+    def __init__(self, model_name: str, reason: str):
+        self.model_name = model_name
+        self.reason = reason
+
+    def __str__(self) -> str:
+        return f"the configuration of the '{self.model_name}' table model is incorrect, {self.reason}"

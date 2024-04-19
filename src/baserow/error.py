@@ -3,13 +3,17 @@ This module contains the custom exceptions of the package.
 """
 
 
-class SingletonAlreadyConfiguredError(Exception):
+class PackageClientNotConfiguredError(Exception):
     """
-    Thrown when an attempt is made to call the configuration method on an already configured singleton again.
+    Thrown when the PackageClient is intended to be used but has not been
+    configured yet.
     """
 
+    def __str__(self) -> str:
+        return "the package-wide GlobalClient is not defined; it must first be configured with configure()"
 
-class PackageClientAlreadyDefinedError(Exception):
+
+class PackageClientAlreadyConfiguredError(Exception):
     """
     This exception is thrown if the package user attempts to call the
     baserow.config_client() method multiple times. To prevent unpredictable
@@ -27,6 +31,25 @@ class PackageClientAlreadyDefinedError(Exception):
 
     def __str__(self) -> str:
         return f"attempted to configure the package-wide client with the URL '{self.new_url}', even though it was already configured with the URL '{self.old_url}'"
+
+
+class NoClientAvailable(Exception):
+    """
+    Thrown when a Table instance is not given a client, and the GlobalClient of
+    the package is not configured. This would implicitly raise a
+    PackageClientNotConfiguredError, but this behavior is not transparent to the
+    package user and could be confusing. Therefore, this exception was created
+    for this case (when using the ORM-like abstraction).
+
+    Args:
+        table_name: Name of the table.
+    """
+
+    def __init__(self, table_name: str):
+        self.table_name = table_name
+
+    def __str__(self) -> str:
+        return f"there is no API client available for the table '{self.table_name}'. Either configure the package-wide GlobalClient or use the client property of your Table model"
 
 
 class JWTAuthRequiredError(Exception):
@@ -81,3 +104,8 @@ class UnspecifiedBaserowError(Exception):
 
     def __str__(self) -> str:
         return f"Baserow returned an error with status code {self.status_code}: {self.body}"
+
+
+class NoClientError(Exception):
+    """
+    """

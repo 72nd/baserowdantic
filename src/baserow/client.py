@@ -8,10 +8,9 @@ import enum
 from re import I
 from typing import Any, Generic, Optional, Protocol, Type, TypeVar, Union
 import aiohttp
-from pydantic import BaseModel, Field, RootModel
+from pydantic import BaseModel, RootModel
 
-from baserow.error import BaserowError, JWTAuthRequiredError, PackageClientAlreadyDefinedError, SingletonAlreadyConfiguredError, UnspecifiedBaserowError
-from baserow.field import FieldType
+from baserow.error import BaserowError, JWTAuthRequiredError, PackageClientAlreadyConfiguredError, PackageClientNotConfiguredError, UnspecifiedBaserowError
 from baserow.field_config import FieldConfig, FieldConfigType
 from baserow.filter import Filter
 
@@ -246,7 +245,7 @@ class Client:
                 descending.
             page (Optional[int], optional): The page of the paging.
             size (Optional[int], optional): How many records should be returned
-                at max. Defaults to 100 and is 200.
+                at max. Defaults to 100 and cannot exceed 200.
         """
         params: dict[str, str] = {
             "user_field_names": "true" if user_field_names else "false",
@@ -855,17 +854,15 @@ class GlobalClient(Client):
     """
     _instance: Optional[Client] = None
     _is_initialized: bool = False
-    _is_configured: bool = False
+    is_configured: bool = False
     __url: str = ""
     __token: Optional[str] = None
     __email: Optional[str] = None
     __password: Optional[str] = None
 
     def __new__(cls):
-        if not cls._is_configured:
-            raise RuntimeError(
-                "client singleton has to be configured first using the configure() method"
-            )
+        if not cls.is_configured:
+            raise PackageClientNotConfiguredError
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
@@ -900,56 +897,10 @@ class GlobalClient(Client):
             password (str, optional): Password of a Baserow user for the JWT
                 authentication.
         """
-        if cls._is_configured:
-            raise SingletonAlreadyConfiguredError(
-                "singleton client was already configured",
-            )
+        if cls.is_configured:
+            raise PackageClientAlreadyConfiguredError(cls.__url, url)
         cls.__url = url
         cls.__token = token
         cls.__email = email
         cls.__password = password
-        cls._is_configured = True
-
-
-global_client = GlobalClient
-"""
-If the functions of the package should always interact with the same Baserow
-instance in an application, the global client can be set. Once configured, this
-client will be used for all API calls, unless a different client is specified
-for specific functions. To configure this, the client_config method should be
-used.
-
-To prevent unpredictable behavior, the package-wide client can only be set once
-per runtime.
-"""
-
-
-def client_config(
-    url: str,
-    token: Optional[str] = None,
-    email: Optional[str] = None,
-    password: Optional[str] = None,
-):
-    """
-    This method can be used to set up the package-wide client, which will then
-    be utilized by default unless a specific client is designated for a given
-    method. The client can only be configured once.
-
-    Args:
-        token (str, optional): An access token (referred to as a database token
-            in Baserow's documentation) can be generated in the user settings
-            within Baserow.
-        email (str, optional): Email address of a Baserow user for the JWT
-            authentication.
-        password (str, optional): Password of a Baserow user for the JWT
-            authentication.
-    """
-    try:
-        global_client.configure(
-            url,
-            token=token,
-            email=email,
-            password=password,
-        )
-    except SingletonAlreadyConfiguredError:
-        raise PackageClientAlreadyDefinedError(global_client()._url, url)
+        cls.is_configured = True

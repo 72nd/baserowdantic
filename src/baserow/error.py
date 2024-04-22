@@ -124,3 +124,17 @@ class InvalidTableConfiguration(Exception):
 
     def __str__(self) -> str:
         return f"the configuration of the '{self.model_name}' table model is incorrect, {self.reason}"
+
+
+class RowIDNotSetError(Exception):
+    """
+    Raised when a method of a `Table` instance requires the `Table.row_id`
+    but it has not been set.
+    """
+
+    def __init__(self, model_name: str, method_name: str):
+        self.model_name = model_name
+        self.method_name = method_name
+
+    def __str__(self) -> str:
+        return f"{self.method_name} only works on a {self.model_name} table if the row_id is set"

@@ -4,12 +4,12 @@ The module provides the ORM-like functionality of Baserowdantic.
 
 
 import abc
-from typing import ClassVar, Generic, Optional, Type, TypeVar, Union
+from typing import Any, ClassVar, Generic, Optional, Type, TypeVar, Union
 
 from pydantic import BaseModel, ConfigDict, Field, RootModel, computed_field, field_validator, model_serializer, model_validator
 
-from baserow.client import Client, GlobalClient
-from baserow.error import InvalidTableConfiguration, NoClientAvailableError
+from baserow.client import Client, GlobalClient, MinimalRow
+from baserow.error import InvalidTableConfiguration, NoClientAvailableError, RowIDNotSetError
 from baserow.filter import Filter
 
 
@@ -141,6 +141,8 @@ class Table(BaseModel, abc.ABC):
     `GlobalClient` is used. Ensure that it is configured before use.
     """
 
+    row_id: Optional[int] = Field(default=None, alias=str("id"))
+
     @property
     @abc.abstractmethod
     def table_id(cls) -> int:  # type: ignore
@@ -257,3 +259,116 @@ class Table(BaseModel, abc.ABC):
                 size=size,
             )
         return rsl.results
+
+    @classmethod
+    async def update_by_id(
+        cls: Type[T],
+        row_id: int,
+        by_alias: bool = True,
+        **kwargs: Any,
+    ) -> Union[T, MinimalRow]:
+        """
+        Update the fields in a row (defined by its ID) given by the kwargs
+        parameter. The keys provided must be valid field names in the model.
+        values will be validated against the model. If the value type is
+        inherited by the BaseModel, its serializer will be applied to the value
+        and submitted to the database. Please note that custom _Field_
+        serializers for any other types are not taken into account.
+
+        The custom model serializer is used in the module because the structure
+        of some Baserow fields differs between the GET result and the required
+        POST data for modification. For example, the MultipleSelectField returns
+        ID, text value, and color with the GET request. However, only a list of
+        IDs or values is required for updating the field using a POST request.
+
+        Args:
+            row_id (int): ID of row in Baserow to be updated.
+            by_alias (bool, optional): Specify whether to use alias values to
+                address field names in Baserow. Note that this value is set to
+                True by default, contrary to pydantic's usual practice. In the
+                context of the table model (which is specifically used to
+                represent Baserow tables), setting an alias typically indicates
+                that the field name in Baserow is not a valid Python variable
+                name.
+        """
+        payload = cls.__model_dump_subset(by_alias, **kwargs)
+        # if cls.dump_payload:
+        #     logger.debug(payload)
+        return await cls.__req_client().update_row(
+            cls.table_id,
+            row_id,
+            payload,
+            True,
+        )
+
+    @classmethod
+    def batch_update(cls, data: dict[int, dict[str, Any]], by_alias: bool = True):
+        """
+        Updates multiple fields in the database. The given data dict must map
+        the unique row id to the data to be updated. The input is validated
+        against the model. See the update method documentation for more
+        information about its limitations and underlying ideas.
+
+        Args:
+            data: A dict mapping the unique row id to the data to be updated.
+            by_alias: Please refer to the documentation on the update method to
+                learn more about this arg.
+        """
+        payload = []
+        for key, value in data.items():
+            entry = cls.__model_dump_subset(by_alias, **value)
+            entry["id"] = key
+            payload.append(entry)
+        # if cls.dump_payload:
+        #     logger.debug(payload)
+        raise NotImplementedError(
+            "Baserow client library currently does not support batch update operations on rows"
+        )
+
+    async def update(
+        self: T,
+        by_alias: bool = True,
+        **kwargs: Any,
+    ) -> Union[T, MinimalRow]:
+        """
+        Short-hand for the `Table.update_by_id()` method, for instances with the
+        `Table.row_id` set.
+        """
+        if self.row_id is None:
+            raise RowIDNotSetError(self.__class__.__name__, "update")
+        return await self.update_by_id(self.row_id, by_alias, **kwargs)
+
+    @classmethod
+    def __validate_single_field(cls, field_name: str, value: Any) -> dict[str, Any] | tuple[dict[str, Any], dict[str, Any] | None, set[str]]:
+        return cls.__pydantic_validator__.validate_assignment(
+            cls.model_construct(), field_name, value
+        )
+
+    @classmethod
+    def __model_dump_subset(cls, by_alias: bool, **kwargs: Any) -> dict[str, Any]:
+        """
+        This method takes a dictionary of keyword arguments (kwargs) and
+        validates it against the model before serializing it as a dictionary. It
+        is used for the update and batch_update methods. If a field value is
+        inherited from a BaseModel, it will be serialized using model_dump.
+
+        Please refer to the documentation on the update method to learn more
+        about its limitations and underlying ideas.
+        """
+        rsl = {}
+        for key, value in kwargs.items():
+            # Check, whether the submitted key-value pairs are in the model and
+            # the value passes the validation specified by the field.
+            cls.__validate_single_field(key, value)
+
+            # If a field has an alias, replace the key with the alias.
+            rsl_key = key
+            alias = cls.model_fields[key].alias
+            if by_alias and alias:
+                rsl_key = alias
+
+            # When the field value is a pydantic model, serialize it.
+            rsl[rsl_key] = value
+            if isinstance(value, BaseModel):
+                rsl[rsl_key] = value.model_dump(by_alias=by_alias)
+        return rsl

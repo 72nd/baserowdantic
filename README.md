@@ -371,7 +371,7 @@ TODO.
 
 A model can be validated against a table to ensure that the defined table model corresponds to the table in Baserow. The following checks are performed:
 
-- Whether all fields defined in the model with the same name and type are present in the Baserow table. If not, an error.FieldNotInBaserowTableException or error.FieldTypeDiffersException is thrown.
+- Whether all fields defined in the model with the same name and type are present in the Baserow table. If not, an `error.FieldNotInBaserowTableError` or `error.FieldTypeDiffersError` is thrown.
 - Whether all fields present in the Baserow table are also defined in the model.
 
 TODO.
@@ -389,7 +389,9 @@ TODO.
 
 ### Update a row
 
-TODO: Single.
+TODO: Single by ID.
+
+TODO: Single with instance.
 
 TODO: Batch.
 

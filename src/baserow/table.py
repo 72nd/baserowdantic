@@ -4,7 +4,7 @@ The module provides the ORM-like functionality of Baserowdantic.
 
 
 import abc
-from typing import Any, ClassVar, Generic, Optional, Type, TypeVar, Union
+from typing import Any, ClassVar, Generic, Optional, Self, Type, TypeVar, Union
 
 from pydantic import BaseModel, ConfigDict, Field, RootModel, computed_field, field_validator, model_serializer, model_validator
 
@@ -324,6 +324,23 @@ class Table(BaseModel, abc.ABC):
         raise NotImplementedError(
             "Baserow client library currently does not support batch update operations on rows"
         )
+
+    async def create(self) -> MinimalRow:
+        """
+        Creates a new row in the table with the data from the instance. Please
+        note that this method does not check whether the fields defined by the
+        model actually exist.
+        """
+        rsl = await self.__req_client().create_row(
+            self.table_id,
+            self.model_dump(by_alias=True, mode="json", exclude_none=True),
+            True,
+        )
+        if not isinstance(rsl, MinimalRow):
+            raise RuntimeError(
+                f" expected MinimalRow instance got {type(rsl)} instead",
+            )
+        return rsl
 
     async def update(
         self: T,

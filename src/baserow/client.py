@@ -3,14 +3,15 @@ This module handles the interaction with Baserow's REST API over HTTP.
 """
 
 import asyncio
-from contextvars import Token
 import enum
-from re import I
-from typing import Any, Generic, Optional, Protocol, Type, TypeVar, Union
+from io import BufferedReader
+from typing import Any, Generic, Optional, Type, TypeVar, Union
+
 import aiohttp
 from pydantic import BaseModel, RootModel
 
 from baserow.error import BaserowError, JWTAuthRequiredError, PackageClientAlreadyConfiguredError, PackageClientNotConfiguredError, UnspecifiedBaserowError
+from baserow.field import File
 from baserow.field_config import FieldConfig, FieldConfigType
 from baserow.filter import Filter
 
@@ -35,12 +36,6 @@ def _list_to_str(items: list[str]) -> str:
 T = TypeVar("T", bound=Union[BaseModel, RootModel])
 
 A = TypeVar("A")
-
-
-class JsonSerializable(Protocol):
-    @classmethod
-    def model_validate_json(cls, data: str):
-        ...
 
 
 class RowResponse(BaseModel, Generic[T]):
@@ -575,6 +570,65 @@ class Client:
             json
         )
 
+    async def upload_file(self, file: BufferedReader) -> File:
+        """
+        Uploads a file to Baserow by uploading the file contents directly. The
+        file is passed as a `BufferedReader`. So, a local file can be loaded
+        using `open("my-file.ext", "rb")` and then passed to this method.
+
+        After the file is uploaded, it needs to be linked to the field in the
+        table row. For this, with the Client.update_row() method, either the
+        complete field.File instance can be added as a list item to the File
+        field or simply the name (field.File.name, the name is unique in any
+        case).
+
+        It's also possible to directly upload a file accessible via a public
+        URL. For this purpose, use Client.upload_file_via_url().
+
+        Args:
+            file (BufferedReader): A BufferedReader containing the file to be
+                uploaded.
+        """
+        return await self._typed_request(
+            "post",
+            _url_join(
+                self._url,
+                API_PREFIX,
+                "user-files/upload-file",
+            ),
+            File,
+            data={"file": file},
+        )
+
+    async def upload_file_via_url(self, url: str) -> File:
+        """
+        Uploads a file from a given URL to the storage of Baserow. The Baserow
+        instance must have access to this URL.
+
+        After the file is uploaded, it needs to be linked to the field in the
+        table row. For this, with the Client.update_row() method, either the
+        complete field.File instance can be added as a list item to the File
+        field or simply the name (field.File.name, the name is unique in any
+        case).
+
+        It's also possible to upload a locally available file. For this purpose,
+        use `Client.upload_file()`.
+
+        Args:
+            url (str): The URL of the file.
+        """
+        return await self._typed_request(
+            "post",
+            _url_join(
+                self._url,
+                API_PREFIX,
+                "user-files/upload-via-url",
+            ),
+            File,
+            CONTENT_TYPE_JSON,
+            json={"url": url}
+        )
+
     async def delete_row(
         self,
         table_id: int,
@@ -772,6 +826,7 @@ class Client:
         headers: Optional[dict[str, str]] = None,
         params: Optional[dict[str, str]] = None,
         json: Optional[dict[str, Any]] = None,
+        data: Optional[dict[str, Any]] = None,
         use_default_headers: bool = True,
     ) -> T:
         """
@@ -786,6 +841,7 @@ class Client:
             headers,
             params,
             json,
+            data,
             use_default_headers,
         )
         if not rsl:
@@ -800,6 +856,7 @@ class Client:
         headers: Optional[dict[str, str]] = None,
         params: Optional[dict[str, str]] = None,
         json: Optional[dict[str, Any]] = None,
+        data: Optional[dict[str, Any]] = None,
         use_default_headers: bool = True,
     ) -> Optional[T]:
         """
@@ -821,6 +878,7 @@ class Client:
             headers=headers,
             params=params,
             json=json,
+            data=data,
         ) as rsp:
             if rsp.status == 400:
                 err = ErrorResponse.model_validate_json(await rsp.text())

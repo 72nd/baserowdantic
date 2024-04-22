@@ -3,12 +3,16 @@ The module contains definitions for the values of table fields that do not
 directly translate into built-in types.
 """
 
+from __future__ import annotations
 from datetime import datetime
 import enum
 from io import BufferedReader
-from typing import Optional, Union
+from typing import TYPE_CHECKING, Optional, Union
 
 from pydantic import BaseModel, ConfigDict, Field, RootModel, model_serializer, model_validator
+
+if TYPE_CHECKING:
+    from baserow.client import Client
 
 
 class FieldType(str, enum.Enum):
@@ -124,21 +128,30 @@ class File(BaseModel):
     uploaded_at: Optional[datetime] = None
     original_name: Optional[str] = None
 
-    # @classmethod
-    # def upload_file(cls, file: BufferedReader) -> "File":
-    #     """
-    #     Uploads a file to Baserow and returns the result.
-    #     """
-    #     response = Client().upload_file(file)
-    #     return cls.model_validate(asdict(response))
+    @classmethod
+    async def upload_file(cls, client: Client, file: BufferedReader) -> "File":
+        """
+        Uploads a file to Baserow and returns the result. For more information
+        see the `Client.upload_file` documentation.
 
-    # @classmethod
-    # def upload_via_url(cls, url: str) -> "File":
-    #     """
-    #     Loads a file from the given URL into Baserow.
-    #     """
-    #     response = Client().upload_via_url(url)
-    #     return cls.model_validate(asdict(response))
+        Args:
+            client (Client): Instance of a Baserow client to upload the file.
+            file (BufferedReader): A BufferedReader containing the file to be
+                uploaded.
+        """
+        return await client.upload_file(file)
+
+    @classmethod
+    async def upload_file_via_url(cls, client: Client, url: str) -> "File":
+        """
+        Loads a file from the given URL into Baserow. For more information see
+        the `Client.upload_file_via_url()` documentation.
+
+        Args:
+            client (Client): Instance of a Baserow client to upload the file.
+            url (str): The URL of the file.
+        """
+        return await client.upload_file_via_url(url)
 
 
 class FileField(RootModel[list[File]]):
@@ -147,3 +160,71 @@ class FileField(RootModel[list[File]]):
     or from a URL.
     """
     root: list[File]
+
+    async def add_file(
+        self,
+        client: Client,
+        file: BufferedReader,
+        name: Optional[str] = None
+    ):
+        """
+        Uploads a new file to Baserow and adds it to the local field instance.
+        Afterwards, this instance can be used with `Client.update_row()` to update
+        the file field in a row. Further information about uploading and setting
+        files can be found in the documentation of `client.upload_file()`.
+
+        **Caution:** While this method is public, it is primarily part of the
+        implementation of `Table.upload_file()`. If you are not using the
+        ORM-like functionality of `Table`, it is recommended to use the
+        `Client.upload_file()` method directly. As mentioned above, after
+        executing this method, the file is only uploaded to Baserow's storage
+        but not yet linked to the file field. Therefore, the value of the field
+        in the desired row must be manually updated with the value of this field
+        instance afterwards.
+
+        Args:
+            client (Client): Instance of a Baserow client to upload the file.
+            file (BufferedReader): A BufferedReader containing the file to be
+                uploaded.
+            name (str, optional): Optional file name, which will be displayed in
+                the Baserow user interface. This name is also used when a file
+                is downloaded from Baserow.
+        """
+        new_file = await File.upload_file(client, file)
+        if name is not None:
+            new_file.original_name = name
+        self.root.append(new_file)
+
+    async def add_file_via_url(
+        self,
+        client: Client,
+        url: str,
+        name: Optional[str] = None
+    ):
+        """
+        Uploads a new file from a url to Baserow and adds it to the local field
+        instance. Afterwards, this instance can be used with `Client.update_row()`
+        to update the file field in a row. Further information about uploading
+        and setting files can be found in the documentation of
+        `client.upload_file_via_url()`.
+
+        **Caution:** While this method is public, it is primarily part of the
+        implementation of `Table.upload_file()`. If you are not using the
+        ORM-like functionality of `Table`, it is recommended to use the
+        `Client.upload_file()` method directly. As mentioned above, after
+        executing this method, the file is only uploaded to Baserow's storage
+        but not yet linked to the file field. Therefore, the value of the field
+        in the desired row must be manually updated with the value of this field
+        instance afterwards.
+
+        Args:
+            client (Client): Instance of a Baserow client to upload the file.
+            url (str): The URL of the file.
+            name (str, optional): Optional file name, which will be displayed in
+                the Baserow user interface. This name is also used when a file
+                is downloaded from Baserow.
+        """
+        new_file = await File.upload_file_via_url(client, url)
+        if name is not None:
+            new_file.original_name = name
+        self.root.append(new_file)

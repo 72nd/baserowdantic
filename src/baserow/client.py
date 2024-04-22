@@ -2,6 +2,7 @@
 This module handles the interaction with Baserow's REST API over HTTP.
 """
 
+from __future__ import annotations
 import asyncio
 import enum
 from io import BufferedReader
@@ -582,6 +583,23 @@ class Client:
         field or simply the name (field.File.name, the name is unique in any
         case).
 
+        Example usage:
+
+        ```python
+        with open("my-image.png", "rb") as file:
+            rsl = await client.upload_file(file)
+
+        table_id = 23
+        row_id = 42
+        file_field_name = "Attachments"
+        await client.update_row(
+            table_id,
+            row_id,
+            {file_field_name: [{"name": rsl.name}],
+            True
+        )
+        ```
+
         It's also possible to directly upload a file accessible via a public
         URL. For this purpose, use Client.upload_file_via_url().
 
@@ -610,6 +628,22 @@ class Client:
         complete field.File instance can be added as a list item to the File
         field or simply the name (field.File.name, the name is unique in any
         case).
+
+        Example usage:
+
+        ```python
+        rsl = await client.upload_file_via_url("https://picsum.photos/500")
+
+        table_id = 23
+        row_id = 42
+        file_field_name = "Attachments"
+        await client.update_row(
+            table_id,
+            row_id,
+            {file_field_name: [{"name": rsl.name}],
+            True
+        )
+        ```
 
         It's also possible to upload a locally available file. For this purpose,
         use `Client.upload_file()`.

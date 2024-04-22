@@ -4,9 +4,9 @@ The module provides the ORM-like functionality of Baserowdantic.
 
 
 import abc
-from typing import ClassVar, Optional, Type, TypeVar
+from typing import ClassVar, Generic, Optional, Type, TypeVar, Union
 
-from pydantic import BaseModel, computed_field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, RootModel, computed_field, field_validator, model_serializer, model_validator
 
 from baserow.client import Client, GlobalClient
 from baserow.error import InvalidTableConfiguration, NoClientAvailableError
@@ -36,6 +36,77 @@ def valid_configuration(func):
 
 
 T = TypeVar("T", bound="Table")
+
+
+class RowLink(BaseModel, Generic[T]):
+    """
+    A single linking of one row to another row in another table. A link field
+    can have multiple links. Part of `field.TableLinkField`.
+    """
+    row_id: Optional[int] = Field(alias=str("id"))
+    key: Optional[str] = Field(alias=str("value"))
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    @model_validator(mode="after")
+    def id_or_value_must_be_set(self: "RowLink") -> "RowLink":
+        if self.row_id is None and self.key is None:
+            raise ValueError(
+                "At least one of the row_id and value fields must be set"
+            )
+        return self
+
+    @model_serializer
+    def serialize(self) -> Union[int, str]:
+        """
+        Serializes the field into the data structure required by the Baserow
+        API. If an entry has both an id and a value set, the id is used.
+        Otherwise the key field is used.
+
+        From the Baserow API documentation: Accepts an array containing the
+        identifiers or main field text values of the related rows.
+        """
+        if self.row_id is not None:
+            return self.row_id
+        if self.key is not None:
+            return self.key
+        raise ValueError("both fields id and key are unset for this entry")
+
+    def query_linked_row(self):
+        """
+        Queries and returns the linked row.
+        """
+
+
+class TableLinkField(RootModel[list[RowLink]], Generic[T]):
+    """
+    A link to table field creates a link between two existing tables by
+    connecting data across tables with linked rows.
+    """
+    root: list[RowLink[T]]
+
+    def id_str(self) -> str:
+        """Returns a list of all ID's as string for debugging."""
+        return ",".join([str(link.row_id) for link in self.root])
+
+    def query_linked_rows(self):
+        """
+        Queries and returns all linked rows.
+        """
+        table_id = self.__get_linked_table()
+        print(table_id)
+
+    def __get_linked_table(self) -> T:
+        metadata = self.__pydantic_generic_metadata__
+        if "args" not in metadata:
+            raise ValueError(
+                f"couldn't determine linked table, args not in __pydantic_generic_metadata__",
+            )
+        if len(metadata["args"]) < 1:
+            raise ValueError(
+                f"couldn't determine linked table, args in __pydantic_generic_metadata__ is empty",
+            )
+        return metadata["args"][0]
 
 
 class Table(BaseModel, abc.ABC):
@@ -105,13 +176,24 @@ class Table(BaseModel, abc.ABC):
 
     @classmethod
     @valid_configuration
+    async def by_id(cls: Type[T], row_id: int) -> T:
+        """
+        Fetch a single row/entry from the table by the row ID.
+
+        Args:
+            row_id (int): The ID of the row to be returned.
+        """
+        return await cls.__req_client().get_row(cls.table_id, row_id, True, cls)
+
+    @classmethod
+    @valid_configuration
     async def query(
         cls: Type[T],
         filter: Optional[Filter] = None,
         order_by: Optional[list[str]] = None,
         page: Optional[int] = None,
         size: Optional[int] = None,
-    ):
+    ) -> list[T]:
         """
         Queries for rows in the Baserow table. Note that Baserow uses paging. If
         all rows of a table (in line with the optional filter) are needed, set

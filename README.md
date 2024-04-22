@@ -15,14 +15,40 @@ The code snippets demonstrated in this README assume a specific database structu
 
 <details>
   <summary>Person</summary>
-  - **Field name** Type
-  - **Field name** Type
+  <ul>
+    <li><b>Name</b> TextFieldConfig.</li>
+    <li><b>Age</b> NumberFieldConfig.</li>
+    <li><b>CV</b> LongTextFieldConfig.</li>
+    <li><b>Former Employers</b> LinkFieldConfig.</li>
+    <li><b>NDA Signed</b> BooleanFieldConfig.</li>
+    <li><b>Employed since</b> DateFieldConfig.</li>
+    <li><b>Rating</b> RatingFieldConfig.</li>
+    <li><b>Last modified</b> LastModifiedFieldConfig.</li>
+    <li><b>Last modified by</b> LastModifiedByFieldConfig.</li>
+    <li><b>Created on</b> CreatedOnFieldConfig.</li>
+    <li><b>Created by</b> CreatedByFieldConfig.</li>
+    <li><b>Workhours per day</b> DurationFieldConfig.</li>
+    <li><b>Personal Website</b> URLFieldConfig.</li>
+    <li><b>E-Mail</b> EMailFieldConfig.</li>
+    <li><b>Contract</b> FileFieldConfig.</li>
+    <li><b>State</b> SingleSelectFieldConfig.</li>
+    <li><b>Qualifications</b> MultipleSelectFieldConfig.</li>
+    <li><b>Phone</b> PhoneNumberFieldConfig.</li>
+    <li><b>Formula</b> FormulaFieldConfig.</li>
+    <li><b>Rollup</b> RollupFieldConfig.</li>
+    <li><b>Names Former Employers</b> LookupFieldConfig.</li>
+    <li><b>Collaborators</b> MultipleCollaboratorsFieldConfig.</li>
+    <li><b>UUID</b> UUIDFieldConfig.</li>
+    <li><b>Autonumber</b> AutonumberFieldConfig.</li>
+    <li><b>Password</b> PasswordFieldConfig.</li>
+  </ul>
 </details>
 <details>
   <summary>Company</summary>
   <ul>
-    <li><b>Field-name</b> Type.</li>
-    <li><b>Field-name</b> Type.</li>
+    <li><b>Name</b> TextFieldConfig.</li>
+    <li><b>E-Mail</b> EMailFieldConfig.</li>
+    <li><b>Person</b> LinkFieldConfig.</li>
   </ul>
 </details>
 

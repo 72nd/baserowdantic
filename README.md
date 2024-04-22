@@ -1,5 +1,7 @@
 # baserowdantic
 
+**Caution:** This project is in active development and should currently be considered alpha. Therefore, bugs and (fundamental) breaking changes to the API can occur at any time.
+
 This package provides a [CRUD](https://en.wikipedia.org/wiki/Create,_read,_update_and_delete) (Create, Read, Update, Delete) client for [Baserow](https://baserow.io/), an open-source alternative to Airtable. Baserow offers a spreadsheet-like interface in the browser for accessing a relational database. Currently, there are numerous (partial) implementations of the Baserow API in Python. baserowdantic emerged from our specific needs and aims to achieve the following:
 
 - Support CRUD operations on Baserow tables.

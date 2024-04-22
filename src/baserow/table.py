@@ -72,29 +72,16 @@ class RowLink(BaseModel, Generic[T]):
             return self.key
         raise ValueError("both fields id and key are unset for this entry")
 
-    def query_linked_row(self):
+    async def query_linked_row(self) -> T:
         """
         Queries and returns the linked row.
         """
-
-
-class TableLinkField(RootModel[list[RowLink]], Generic[T]):
-    """
-    A link to table field creates a link between two existing tables by
-    connecting data across tables with linked rows.
-    """
-    root: list[RowLink[T]]
-
-    def id_str(self) -> str:
-        """Returns a list of all ID's as string for debugging."""
-        return ",".join([str(link.row_id) for link in self.root])
-
-    def query_linked_rows(self):
-        """
-        Queries and returns all linked rows.
-        """
-        table_id = self.__get_linked_table()
-        print(table_id)
+        if self.row_id is None:
+            raise ValueError(
+                "query_linked_row is currently only implemented using the row_id",
+            )
+        table = self.__get_linked_table()
+        return await table.by_id(self.row_id)
 
     def __get_linked_table(self) -> T:
         metadata = self.__pydantic_generic_metadata__
@@ -107,6 +94,38 @@ class TableLinkField(RootModel[list[RowLink]], Generic[T]):
                 f"couldn't determine linked table, args in __pydantic_generic_metadata__ is empty",
             )
         return metadata["args"][0]
+
+
+class TableLinkField(RootModel[list[RowLink]], Generic[T]):
+    """
+    A link to table field creates a link between two existing tables by
+    connecting data across tables with linked rows.
+    """
+    root: list[RowLink[T]]
+    _cache: Optional[list[T]] = None
+
+    def id_str(self) -> str:
+        """Returns a list of all ID's as string for debugging."""
+        return ",".join([str(link.row_id) for link in self.root])
+
+    async def query_linked_rows(self) -> list[T]:
+        """
+        Queries and returns all linked rows.
+        """
+        rsl: list[T] = []
+        for link in self.root:
+            rsl.append(await link.query_linked_row())
+        return rsl
+
+    async def cached_query_linked_rows(self) -> list[T]:
+        """
+        Same as `TableLinkField.query_linked_rows()` with cached results. The
+        Baserow API is called only the first time. After that, the cached result
+        is returned directly.
+        """
+        if self._cache is None:
+            self._cache = await self.query_linked_rows()
+        return self._cache
 
 
 class Table(BaseModel, abc.ABC):

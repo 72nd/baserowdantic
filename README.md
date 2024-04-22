@@ -346,7 +346,9 @@ TODO.
 
 #### Link field
 
-TODO.
+TODO: General.
+
+TODO: Get values of linked rows.
 
 
 #### File field
@@ -376,11 +378,6 @@ TODO.
 
 
 ### Get by ID
-
-TODO.
-
-
-### Get by linked field
 
 TODO.
 

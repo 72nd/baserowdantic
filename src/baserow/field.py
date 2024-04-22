@@ -44,53 +44,6 @@ class FieldType(str, enum.Enum):
     PASSWORD = "password"
 
 
-class RowLink(BaseModel):
-    """
-    A single linking of one row to another row in another table. A link field
-    can have multiple links. Part of `field.TableLinkField`.
-    """
-    row_id: Optional[int] = Field(alias=str("id"))
-    key: Optional[str] = Field(alias=str("value"))
-
-    model_config = ConfigDict(populate_by_name=True)
-
-    @model_validator(mode="after")
-    def id_or_value_must_be_set(self: "RowLink") -> "RowLink":
-        if self.row_id is None and self.key is None:
-            raise ValueError(
-                "At least one of the row_id and value fields must be set"
-            )
-        return self
-
-    @model_serializer
-    def serialize(self) -> Union[int, str]:
-        """
-        Serializes the field into the data structure required by the Baserow
-        API. If an entry has both an id and a value set, the id is used.
-        Otherwise the key field is used.
-
-        From the Baserow API documentation: Accepts an array containing the
-        identifiers or main field text values of the related rows.
-        """
-        if self.row_id is not None:
-            return self.row_id
-        if self.key is not None:
-            return self.key
-        raise ValueError("both fields id and key are unset for this entry")
-
-
-class TableLinkField(RootModel[list[RowLink]]):
-    """
-    A link to table field creates a link between two existing tables by
-    connecting data across tables with linked rows.
-    """
-    root: list[RowLink]
-
-    def id_str(self) -> str:
-        """Returns a list of all ID's as string for debugging."""
-        return ",".join([str(link.row_id) for link in self.root])
-
-
 class UserField(BaseModel):
     """
     A table field that contains one Baserow system user.

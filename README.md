@@ -321,3 +321,80 @@ client.create_database_field(
   TextFieldConfig(name"Pronoun")
 )
 ```
+
+
+## ORM-like access using models
+
+The main motivation behind baserowdantic is to handle »everyday« CRUD (Create, Read, Update, Delete) interactions with Baserow through a model derived from pydantic's BaseModel called Table. This Table model defines the structure and layout of a table in Baserow at a single location, thereby enabling validation of both input and output.
+
+
+### Configure the model
+
+In order for a Table instance to interact with Baserow, it must first be configured using ClassVars.
+
+TODO.
+
+
+### Define the model fields
+
+Table fields are defined in the usual Pydantic manner. For more complex field types (such as File, Single Select, etc.), baserowdantic defines its own models.
+
+TODO.
+
+
+#### Link field
+
+TODO.
+
+
+#### File field
+
+The File field in Baserow can store one or more files (attachments).
+
+TODO.
+
+
+#### Single and multiple select field
+
+TODO.
+
+### Validate
+
+TODO.
+
+
+### Query a table
+
+A model can be validated against a table to ensure that the defined table model corresponds to the table in Baserow. The following checks are performed:
+
+- Whether all fields defined in the model with the same name and type are present in the Baserow table. If not, an error.FieldNotInBaserowTableException or error.FieldTypeDiffersException is thrown.
+- Whether all fields present in the Baserow table are also defined in the model.
+
+TODO.
+
+
+### Get by ID
+
+TODO.
+
+
+### Get by linked field
+
+TODO.
+
+
+### Create a row
+
+TODO.
+
+
+### Update a row
+
+TODO: Single.
+
+TODO: Batch.
+
+
+### Delete a row
+
+TODO.

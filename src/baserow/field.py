@@ -7,7 +7,7 @@ from __future__ import annotations
 from datetime import datetime
 import enum
 from io import BufferedReader
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING, Generic, Optional, TypeVar, Union
 
 from pydantic import BaseModel, ConfigDict, Field, RootModel, model_serializer, model_validator
 
@@ -228,3 +228,54 @@ class FileField(RootModel[list[File]]):
         if name is not None:
             new_file.original_name = name
         self.root.append(new_file)
+
+
+SelectEnum = TypeVar("SelectEnum", bound=enum.Enum)
+"""
+Instances of a SelectEntry have to be bound to a enum which contain the possible
+values of the select entry.
+"""
+
+
+class SelectEntry(BaseModel, Generic[SelectEnum]):
+    """A entry in a single or multiple select field."""
+    entry_id: Optional[int] = Field(alias="id")
+    value: Optional[SelectEnum]
+    color: Optional[str]
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    @model_validator(mode="after")
+    def id_or_value_must_be_set(self: "SelectEntry") -> "SelectEntry":
+        if self.entry_id is None and self.value is None:
+            raise ValueError(
+                "At least one of the entry_id and value fields must be set"
+            )
+        return self
+
+    @model_serializer
+    def serialize(self) -> Union[int, str]:
+        """
+        Serializes the field into the data structure required by the Baserow
+        API. If an entry has both an id and a value set, the id is used.
+        Otherwise the set field is used.
+
+        From the Baserow API documentation: Accepts an integer or a text value
+        representing the chosen select option id or option value. A null value
+        means none is selected. In case of a text value, the first matching
+        option is selected. 
+        """
+        if self.entry_id is not None:
+            return self.entry_id
+        if self.value is not None:
+            return self.value.value
+        raise ValueError("both fields id and value are unset for this entry")
+
+
+class SingleSelectField(SelectEntry[SelectEnum]):
+    pass
+
+
+class MultipleSelectField(RootModel[list[SelectEntry]], Generic[SelectEnum]):
+    """Multiple select field in a table."""
+    root: list[SelectEntry[SelectEnum]]

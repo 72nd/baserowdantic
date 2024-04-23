@@ -1,14 +1,17 @@
 """
-This module handles the config/properties of individual fields. These classes
-cannot be used to parse/validate data coming from Baserow.
+This module handles the config/properties of individual Baserow fields. These
+classes cannot be used to parse/validate data coming from Baserow.
 """
 
 
+import abc
+from collections import deque, namedtuple
+from datetime import date, datetime, time, timedelta
 import enum
 import random
 
-from typing import Annotated, Literal, Optional, Union
-from pydantic import BaseModel, Field, RootModel
+from typing import Annotated, Any, Literal, Optional, Union
+from pydantic import BaseModel, Field, IPvAnyAddress, RootModel
 
 
 def random_color() -> str:
@@ -22,14 +25,14 @@ def random_color() -> str:
     return f"#{red:02x}{green:02x}{blue:02x}"
 
 
-class FieldConfigBase(BaseModel):
+class FieldConfigBase(BaseModel, abc.ABC):
     """
     Many of the fields (or rows) in Baserow tables have certain properties that
     can be set. These are managed with this class. Each field type implements
     its own Config class. Using these config classes, new fields can be created
     in a table.
     """
-    name: str = Field(max_length=255)
+    name: Optional[str] = Field(max_length=255, default=None)
     """Name of the field."""
     id: Optional[int] = None
     """
@@ -259,6 +262,7 @@ class MultipleSelectFieldConfig(FieldConfigBase):
     from a set of options. 
     """
     type: Literal["multiple_select"] = "multiple_select"
+    select_options: list[SelectEntryConfig]
 
 
 class PhoneNumberFieldConfig(FieldConfigBase):
@@ -424,3 +428,35 @@ FieldConfigType = Annotated[
 
 class FieldConfig(RootModel[FieldConfigType]):
     root: FieldConfigType
+
+
+class Config:
+    """
+    Encapsulates a FieldConfigType in a non-pydantic model. This is intended to
+    pass the configuration of a field in Baserow to a Table model using
+    typing.Annotated without causing a validation error.
+
+    Args:
+        config (FieldConfigType): An instance of a field config to be
+            encapsulated.
+    """
+
+    def __init__(self, config: FieldConfigType):
+        self.config = config
+
+
+DEFAULT_CONFIG_FOR_BUILT_IN_TYPES: dict[Any, FieldConfigBase] = {
+    bool: BooleanFieldConfig(),
+    bytes: TextFieldConfig(),
+    date: DateFieldConfig(),
+    datetime: DateFieldConfig(date_include_time=True),
+    float: NumberFieldConfig(number_decimal_places=3),
+    int: NumberFieldConfig(),
+    timedelta: DurationFieldConfig(),
+}
+"""
+Dict mapping each built-in Python type to a Baserow filed config that should be
+used by default for that type. This information is used in the
+Table.create_table() method. For all types that cannot be mapped to a field type
+of a Baserow table, the value is None.
+"""

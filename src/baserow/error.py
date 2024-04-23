@@ -3,9 +3,6 @@ This module contains the custom exceptions of the package.
 """
 
 
-from pydantic_core.core_schema import model_field
-
-
 class PackageClientNotConfiguredError(Exception):
     """
     Thrown when the PackageClient is intended to be used but has not been
@@ -138,3 +135,34 @@ class RowIDNotSetError(Exception):
 
     def __str__(self) -> str:
         return f"{self.method_name} only works on a {self.model_name} table if the row_id is set"
+
+
+class PydanticGenericMetadataError(Exception):
+    """
+    Thrown when the type of the generic type of a generic model could not be
+    determined.
+
+    Args:
+        model_name (str): Name of the model.
+        generic_name (str): Name/usage of the generic.
+        reason (str): Reason for the failure.
+    """
+    @classmethod
+    def args_missing(cls, model_name: str, generic_name: str):
+        """The exception if there is no args field in the metadata."""
+        return cls(model_name, generic_name, "args not in __pydantic_generic_metadata__")
+
+    @classmethod
+    def args_empty(cls, model_name: str, generic_name: str):
+        """
+        The exception if the tuple of the args field in the metadata is empty.
+        """
+        return cls(model_name, generic_name, "args tuple in __pydantic_generic_metadata__ is empty")
+
+    def __init__(self, model_name: str, generic_name: str, reason: str):
+        self.model_name = model_name
+        self.generic_name = generic_name
+        self.reason = reason
+
+    def __str__(self) -> str:
+        return f"couldn't determine {self.generic_name} of {self.model_name}, {self.reason}"

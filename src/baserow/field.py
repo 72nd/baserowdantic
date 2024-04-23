@@ -4,12 +4,16 @@ directly translate into built-in types.
 """
 
 from __future__ import annotations
+import abc
 from datetime import datetime
 import enum
 from io import BufferedReader
-from typing import TYPE_CHECKING, Generic, Optional, TypeVar, Union
+from typing import TYPE_CHECKING, Generic, Optional, TypeVar, Union, get_args, get_origin, get_overloads
 
 from pydantic import BaseModel, ConfigDict, Field, RootModel, model_serializer, model_validator
+
+from baserow.error import PydanticGenericMetadataError
+from baserow.field_config import CreatedByFieldConfig, FieldConfigType, FileFieldConfig, LastModifiedByFieldConfig, MultipleCollaboratorsFieldConfig, MultipleSelectFieldConfig, SelectEntryConfig, SingleSelectFieldConfig
 
 if TYPE_CHECKING:
     from baserow.client import Client
@@ -44,7 +48,19 @@ class FieldType(str, enum.Enum):
     PASSWORD = "password"
 
 
-class UserField(BaseModel):
+class BaserowField(BaseModel, abc.ABC):
+    """
+    Abstract base class for all Baserow fields that are not covered by the
+    built-in types.
+    """
+
+    @classmethod
+    @abc.abstractmethod
+    def default_config(cls) -> FieldConfigType:
+        """Returns the default field config for a given field type."""
+
+
+class User(BaseModel):
     """
     A table field that contains one Baserow system user.
     """
@@ -52,11 +68,27 @@ class UserField(BaseModel):
     name: Optional[str] = Field(alias=str("name"))
 
 
-class UsersField(RootModel[list[UserField]]):
+class LastModifiedByField(User, BaserowField):
+    @classmethod
+    def default_config(cls) -> FieldConfigType:
+        return LastModifiedByFieldConfig()
+
+
+class CreatedByField(User, BaserowField):
+    @classmethod
+    def default_config(cls) -> FieldConfigType:
+        return CreatedByFieldConfig()
+
+
+class MultipleCollaboratorsField(BaserowField, RootModel[list[User]]):
     """
     A table field that contains one or multiple Baserow system user(s).
     """
-    root: list[UserField]
+    root: list[User]
+
+    @classmethod
+    def default_config(cls) -> FieldConfigType:
+        return MultipleCollaboratorsFieldConfig()
 
 
 class FileThumbnail(BaseModel):
@@ -107,12 +139,16 @@ class File(BaseModel):
         return await client.upload_file_via_url(url)
 
 
-class FileField(RootModel[list[File]]):
+class FileField(BaserowField, RootModel[list[File]]):
     """
     A file field allows you to easily upload one or more files from your device
     or from a URL.
     """
     root: list[File]
+
+    @classmethod
+    def default_config(cls) -> FieldConfigType:
+        return FileFieldConfig()
 
     async def add_file(
         self,
@@ -224,11 +260,57 @@ class SelectEntry(BaseModel, Generic[SelectEnum]):
             return self.value.value
         raise ValueError("both fields id and value are unset for this entry")
 
+    @classmethod
+    def _get_all_possible_values(cls) -> list[str]:
+        metadata = cls.__pydantic_generic_metadata__
+        if "args" not in metadata:
+            raise PydanticGenericMetadataError.args_missing(
+                cls.__class__.__name__,
+                "select entry enum",
+            )
+        if len(metadata["args"]) < 1:
+            raise PydanticGenericMetadataError.args_empty(
+                cls.__class__.__name__,
+                "select entry enum",
+            )
+        select_enum = metadata["args"][0]
+        return [item.value for item in select_enum]
 
-class SingleSelectField(SelectEntry[SelectEnum]):
-    pass
+    @classmethod
+    def _options_config(cls) -> list[SelectEntryConfig]:
+        rsl: list[SelectEntryConfig] = []
+        for value in cls._get_all_possible_values():
+            rsl.append(SelectEntryConfig(value=value))
+        return rsl
 
 
-class MultipleSelectField(RootModel[list[SelectEntry]], Generic[SelectEnum]):
+class SingleSelectField(SelectEntry[SelectEnum], BaserowField):
+    """Single select field in a table."""
+    @classmethod
+    def default_config(cls) -> FieldConfigType:
+        options = super(SingleSelectField, cls)._options_config()
+        return SingleSelectFieldConfig(select_options=options)
+
+
+class MultipleSelectField(BaserowField, RootModel[list[SelectEntry]], Generic[SelectEnum]):
     """Multiple select field in a table."""
     root: list[SelectEntry[SelectEnum]]
+
+    @classmethod
+    def default_config(cls) -> FieldConfigType:
+        metadata = cls.__pydantic_generic_metadata__
+        if "args" not in metadata:
+            raise PydanticGenericMetadataError.args_missing(
+                cls.__class__.__name__,
+                "select entry enum",
+            )
+        if len(metadata["args"]) < 1:
+            raise PydanticGenericMetadataError.args_empty(
+                cls.__class__.__name__,
+                "select entry enum",
+            )
+        select_enum = metadata["args"][0]
+        rsl: list[SelectEntryConfig] = []
+        for item in select_enum:
+            rsl.append(SelectEntryConfig(value=item.value))
+        return MultipleSelectFieldConfig(select_options=rsl)

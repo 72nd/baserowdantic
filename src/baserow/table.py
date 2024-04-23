@@ -9,7 +9,7 @@ from typing import Any, ClassVar, Generic, Optional, Self, Type, TypeVar, Union
 from pydantic import BaseModel, ConfigDict, Field, RootModel, computed_field, field_validator, model_serializer, model_validator
 
 from baserow.client import Client, GlobalClient, MinimalRow
-from baserow.error import InvalidTableConfiguration, NoClientAvailableError, RowIDNotSetError
+from baserow.error import InvalidTableConfiguration, NoClientAvailableError, PydanticGenericMetadataError, RowIDNotSetError
 from baserow.filter import Filter
 
 
@@ -86,12 +86,14 @@ class RowLink(BaseModel, Generic[T]):
     def __get_linked_table(self) -> T:
         metadata = self.__pydantic_generic_metadata__
         if "args" not in metadata:
-            raise ValueError(
-                f"couldn't determine linked table, args not in __pydantic_generic_metadata__",
+            raise PydanticGenericMetadataError.args_missing(
+                self.__class__.__name__,
+                "linked table",
             )
         if len(metadata["args"]) < 1:
-            raise ValueError(
-                f"couldn't determine linked table, args in __pydantic_generic_metadata__ is empty",
+            raise PydanticGenericMetadataError.args_empty(
+                self.__class__.__name__,
+                "linked table",
             )
         return metadata["args"][0]
 
@@ -261,6 +263,7 @@ class Table(BaseModel, abc.ABC):
         return rsl.results
 
     @classmethod
+    @valid_configuration
     async def update_by_id(
         cls: Type[T],
         row_id: int,
@@ -302,6 +305,22 @@ class Table(BaseModel, abc.ABC):
         )
 
     @classmethod
+    @valid_configuration
+    async def delete_by_id(cls: Type[T], row_id: Union[int, list[int]]):
+        """
+        Deletes one or more rows in the Baserow table. If a list of IDs is
+        passed, deletion occurs as a batch command. To delete a single Table
+        instance with the Table.row_id set, the Table.delete() method can also
+        be used.
+
+        Args:
+            row_id (Union[int, list[int]]): ID or ID list of row(s) in Baserow
+            to be deleted.
+        """
+        await cls.__req_client().delete_row(cls.table_id, row_id)
+
+    @classmethod
+    @valid_configuration
     def batch_update(cls, data: dict[int, dict[str, Any]], by_alias: bool = True):
         """
         Updates multiple fields in the database. The given data dict must map
@@ -325,6 +344,7 @@ class Table(BaseModel, abc.ABC):
             "Baserow client library currently does not support batch update operations on rows"
         )
 
+    @valid_configuration
     async def create(self) -> MinimalRow:
         """
         Creates a new row in the table with the data from the instance. Please
@@ -342,18 +362,46 @@ class Table(BaseModel, abc.ABC):
             )
         return rsl
 
+    @valid_configuration
     async def update(
         self: T,
         by_alias: bool = True,
         **kwargs: Any,
     ) -> Union[T, MinimalRow]:
         """
-        Short-hand for the `Table.update_by_id()` method, for instances with the
-        `Table.row_id` set.
+        Updates the row with the ID of this instance. Short-hand for the
+        `Table.update_by_id()` method, for instances with the `Table.row_id`
+        set. For more information on how to use this, please refer to the
+        documentation of this method.
         """
         if self.row_id is None:
             raise RowIDNotSetError(self.__class__.__name__, "update")
         return await self.update_by_id(self.row_id, by_alias, **kwargs)
+
+    @valid_configuration
+    async def delete(self):
+        """
+        Deletes the row with the ID of this instance. Short-hand for the
+        `Table.delete_by_id()` method, for instances with the `Table.row_id`
+        set. For more information on how to use this, please refer to the
+        documentation of this method.
+        """
+        if self.row_id is None:
+            raise RowIDNotSetError(self.__class__.__name__, "update")
+
+    @classmethod
+    async def create_table(cls, database_id: int):
+        """
+        This method creates a new table in the given database based on the
+        structure and fields of the model.
+
+        Args:
+            database_id (int): The ID of the database in which the new table
+                should be created.
+        """
+        if not isinstance(cls.table_name, str):
+            raise InvalidTableConfiguration(cls.__name__, "table_name not set")
+        await cls.__req_client().create_database_table(database_id, cls.table_name)
 
     @classmethod
     def __validate_single_field(cls, field_name: str, value: Any) -> dict[str, Any] | tuple[dict[str, Any], dict[str, Any] | None, set[str]]:

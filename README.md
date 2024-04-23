@@ -393,8 +393,6 @@ TODO: Single by ID.
 
 TODO: Single with instance.
 
-TODO: Batch.
-
 
 ### Delete a row
 

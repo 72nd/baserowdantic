@@ -3,13 +3,18 @@ The module provides the ORM-like functionality of Baserowdantic.
 """
 
 
+import asyncio
 import abc
-from typing import Any, ClassVar, Generic, Optional, Self, Type, TypeVar, Union
+from typing import Any, ClassVar, Generic, Optional, Self, Tuple, Type, TypeVar, Union, get_args, get_origin
+import uuid
 
 from pydantic import BaseModel, ConfigDict, Field, RootModel, computed_field, field_validator, model_serializer, model_validator
+from pydantic.fields import FieldInfo
 
 from baserow.client import Client, GlobalClient, MinimalRow
-from baserow.error import InvalidTableConfiguration, NoClientAvailableError, PydanticGenericMetadataError, RowIDNotSetError
+from baserow.error import InvalidFieldForCreateTableError, InvalidTableConfiguration, MultiplePrimaryFieldsError, NoClientAvailableError, NoPrimaryFieldError, PydanticGenericMetadataError, RowIDNotSetError
+from baserow.field import BaserowField
+from baserow.field_config import DEFAULT_CONFIG_FOR_BUILT_IN_TYPES, Config, FieldConfigType, LinkFieldConfig, PrimaryField
 from baserow.filter import Filter
 
 
@@ -98,13 +103,29 @@ class RowLink(BaseModel, Generic[T]):
         return metadata["args"][0]
 
 
-class TableLinkField(RootModel[list[RowLink]], Generic[T]):
+class TableLinkField(BaserowField, RootModel[list[RowLink]], Generic[T]):
     """
     A link to table field creates a link between two existing tables by
     connecting data across tables with linked rows.
     """
     root: list[RowLink[T]]
     _cache: Optional[list[T]] = None
+
+    @classmethod
+    def default_config(cls) -> FieldConfigType:
+        metadata = cls.__pydantic_generic_metadata__
+        if "args" not in metadata:
+            raise PydanticGenericMetadataError.args_missing(
+                cls.__class__.__name__,
+                "linked table",
+            )
+        if len(metadata["args"]) < 1:
+            raise PydanticGenericMetadataError.args_empty(
+                cls.__class__.__name__,
+                "linked table",
+            )
+        linked_table = metadata["args"][0]
+        return LinkFieldConfig(link_row_table_id=linked_table.table_id)
 
     def id_str(self) -> str:
         """Returns a list of all ID's as string for debugging."""
@@ -183,6 +204,8 @@ class Table(BaseModel, abc.ABC):
     """
     If set to true, the data body for the request is dumped to the debug output.
     """
+    ignore_fields_during_table_creation: ClassVar[list[str]] = ["order", "id"]
+    """Fields with this name are ignored when creating tables."""
 
     @classmethod
     def __req_client(cls) -> Client:
@@ -399,9 +422,132 @@ class Table(BaseModel, abc.ABC):
             database_id (int): The ID of the database in which the new table
                 should be created.
         """
+        # Name is needed for table creation.
         if not isinstance(cls.table_name, str):
             raise InvalidTableConfiguration(cls.__name__, "table_name not set")
-        await cls.__req_client().create_database_table(database_id, cls.table_name)
+
+        # The primary field is determined at this point to ensure that any
+        # exceptions (none, more than one primary field) occur before the
+        # expensive API calls.
+        primary_name, _ = cls.primary_field()
+
+        # Create the new table itself.
+        table_rsl = await cls.__req_client().create_database_table(database_id, cls.table_name)
+        cls.table_id = table_rsl.id
+        primary_id, unused_fields = await cls.__scramble_all_field_names()
+
+        # Create the fields.
+        for key, field in cls.model_fields.items():
+            await cls.__create_table_field(key, field, primary_id, primary_name)
+
+        # Delete unused fields.
+        for field in unused_fields:
+            await cls.__req_client().delete_database_table_field(field)
+
+    @classmethod
+    def primary_field(cls) -> Tuple[str, FieldInfo]:
+        """
+        This method returns a tuple of the field name and pydantic.FieldInfo of
+        the field that has been marked as the primary field. Only one primary
+        field is allowed per table. This is done by adding PrimaryField as a
+        type annotation. Example for such a Model:
+
+        ```python
+        class Person(Table):
+            table_id = 23
+            table_name = "Person"
+            model_config = ConfigDict(populate_by_name=True)
+
+            name: Annotated[
+                str,
+                Field(alias=str("Name")),
+                PrimaryField(),
+            ]
+        ```
+        """
+        rsl: Tuple[str, FieldInfo] | None = None
+        for name, field in cls.model_fields.items():
+            if any(isinstance(item, PrimaryField) for item in field.metadata):
+                if rsl is not None:
+                    raise MultiplePrimaryFieldsError(cls.__name__)
+                rsl = (name, field)
+        if rsl is None:
+            raise NoPrimaryFieldError(cls.__name__)
+        return rsl
+
+    @classmethod
+    async def __create_table_field(cls, name: str, field: FieldInfo, primary_id: int, primary_name: str):
+        if name in cls.ignore_fields_during_table_creation or field.alias in cls.ignore_fields_during_table_creation:
+            return
+
+        config: Optional[FieldConfigType] = None
+        for item in field.metadata:
+            if isinstance(item, Config):
+                config = item.config
+        field_type = cls.__type_for_field(name, field)
+        if config is None and field_type in DEFAULT_CONFIG_FOR_BUILT_IN_TYPES:
+            config = DEFAULT_CONFIG_FOR_BUILT_IN_TYPES[field_type]
+        elif config is None and issubclass(field_type, BaserowField):
+            config = field_type.default_config()
+        elif config is None:
+            raise InvalidFieldForCreateTableError(
+                name,
+                f"{field_type} is not supported"
+            )
+        if field.alias is not None:
+            config.name = field.alias
+        else:
+            config.name = name
+
+        if name == primary_name:
+            await cls.__req_client().update_database_table_field(primary_id, config)
+        else:
+            await cls.__req_client().create_database_table_field(cls.table_id, config)
+
+    @staticmethod
+    def __type_for_field(name: str, field: FieldInfo) -> Type[Any]:
+        if get_origin(field.annotation) is Union:
+            args = get_args(field.annotation)
+            not_none_args = [arg for arg in args if arg is not type(None)]
+            if len(not_none_args) == 1:
+                return not_none_args[0]
+            else:
+                raise InvalidFieldForCreateTableError(
+                    name,
+                    "Union type is not supported",
+                )
+        elif field.annotation is not None:
+            return field.annotation
+        else:
+            raise InvalidFieldForCreateTableError(
+                name,
+                "None type is not supported",
+            )
+
+    @classmethod
+    async def __scramble_all_field_names(cls) -> Tuple[int, list[int]]:
+        """
+        Changes the names of all existing fields in a Baserow table to random
+        UUIDs and returns the ID of the primary file and a list of the other
+        modified fields. This is used to ensure that the automatically created
+        fields in a new table do not collide with the names of subsequently
+        created fields.
+        """
+        fields = await cls.__req_client().list_fields(cls.table_id)
+        primary: int = -1
+        to_delete: list[int] = []
+        for field in fields.root:
+            if field.root.id is None:
+                raise ValueError("field id is None")
+            if field.root.primary:
+                primary = field.root.id
+            else:
+                to_delete.append(field.root.id)
+            await cls.__req_client().update_database_table_field(
+                field.root.id,
+                {"name": str(uuid.uuid4())},
+            )
+        return (primary, to_delete)
 
     @classmethod
     def __validate_single_field(cls, field_name: str, value: Any) -> dict[str, Any] | tuple[dict[str, Any], dict[str, Any] | None, set[str]]:

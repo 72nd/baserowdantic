@@ -166,3 +166,55 @@ class PydanticGenericMetadataError(Exception):
 
     def __str__(self) -> str:
         return f"couldn't determine {self.generic_name} of {self.model_name}, {self.reason}"
+
+
+class InvalidFieldForCreateTableError(Exception):
+    """
+    This error is raised when a field in a `Table` model is not suitable for
+    automatically creating a new table in Baserow.
+
+    Args:
+        field_name (str): Name of the erroneous field.
+        reason (str): Reason for the failure.
+    """
+
+    def __init__(self, field_name: str, reason: str):
+        self.field_name = field_name
+        self.reason = reason
+
+    def __str__(self) -> str:
+        return f"it was not possible to create a field in Baserow for the model field {self.field_name}, {self.reason}"
+
+
+class NoPrimaryFieldError(Exception):
+    """
+    Thrown when a table model has not defined a primary field. See the
+    documentation of table.Table.primary_field() for more information on
+    declaring a primary field.
+
+    Args:
+        model_name (str): Name of the model.
+    """
+
+    def __init__(self, model_name: str):
+        self.model_name = model_name
+
+    def __str__(self) -> str:
+        return f"the model {self.model_name} does not define a primary field"
+
+
+class MultiplePrimaryFieldsError(Exception):
+    """
+    Thrown when a table model has more than one primary field defined. Only one
+    is allowed. See the documentation of `table.Table.primary_field()` for more
+    information on declaring a primary field.
+
+    Args:
+        model_name (str): Name of the model.
+    """
+
+    def __init__(self, model_name: str):
+        self.model_name = model_name
+
+    def __str__(self) -> str:
+        return f"the model {self.model_name} defines more than one primary field, only one is allowed"

@@ -739,7 +739,7 @@ class Client:
         name: str,
         client_session_id: Optional[str] = None,
         client_undo_redo_action_group_id: Optional[str] = None,
-    ):
+    ) -> DatabaseTableResponse:
         """
         Creates synchronously a new table with the given for the database
         related to the provided database_id parameter.
@@ -819,6 +819,96 @@ class Client:
             FieldConfig,
             headers=headers,
             json=field.model_dump(),
+        )
+
+    async def update_database_table_field(
+        self,
+        field_id: int,
+        field: FieldConfigType | dict[str, Any],
+        client_session_id: Optional[str] = None,
+        client_undo_redo_action_group_id: Optional[str] = None,
+    ) -> FieldConfig:
+        """
+        Updates a table field defined by it's id
+
+        Args:
+            field_id (int): The ID of the field to be updated.
+            field (FieldConfigType | dict[str, Any]): The config of the field to
+                be added.
+            client_session_id (str, optional): An optional UUID that marks
+                the action performed by this request as having occurred in a
+                particular client session. Then using the undo/redo endpoints
+                with the same ClientSessionId header this action can be
+                undone/redone.
+            client_undo_redo_action_group_id (str, optional): An optional UUID
+                that marks the action performed by this request as having
+                occurred in a particular action group.Then calling the undo/redo
+                endpoint with the same ClientSessionId header, all the actions
+                belonging to the same action group can be undone/redone together
+                in a single API call.
+        """
+        headers: dict[str, str] = CONTENT_TYPE_JSON.copy()
+        if client_session_id:
+            headers["ClientSessionId"] = client_session_id
+        if client_undo_redo_action_group_id:
+            headers["ClientUndoRedoActionGroupId"] = client_undo_redo_action_group_id
+
+        if not isinstance(field, dict):
+            json = field.model_dump(by_alias=True)
+        else:
+            json = field
+
+        return await self._typed_request(
+            "patch",
+            _url_join(
+                self._url,
+                API_PREFIX,
+                "database/fields",
+                str(field_id),
+            ),
+            FieldConfig,
+            headers=headers,
+            json=json,
+        )
+
+    async def delete_database_table_field(
+        self,
+        field_id: int,
+        client_session_id: Optional[str] = None,
+        client_undo_redo_action_group_id: Optional[str] = None,
+    ):
+        """
+        Deletes a table field defined by it's id
+
+        Args:
+            field_id (int): The ID of the field to be deleted.
+            client_session_id (str, optional): An optional UUID that marks
+                the action performed by this request as having occurred in a
+                particular client session. Then using the undo/redo endpoints
+                with the same ClientSessionId header this action can be
+                undone/redone.
+            client_undo_redo_action_group_id (str, optional): An optional UUID
+                that marks the action performed by this request as having
+                occurred in a particular action group.Then calling the undo/redo
+                endpoint with the same ClientSessionId header, all the actions
+                belonging to the same action group can be undone/redone together
+                in a single API call.
+        """
+        headers: dict[str, str] = CONTENT_TYPE_JSON.copy()
+        if client_session_id:
+            headers["ClientSessionId"] = client_session_id
+        if client_undo_redo_action_group_id:
+            headers["ClientUndoRedoActionGroupId"] = client_undo_redo_action_group_id
+        await self._request(
+            "DELETE",
+            _url_join(
+                self._url,
+                API_PREFIX,
+                "database/fields",
+                str(field_id),
+            ),
+            None,
+            headers=headers,
         )
 
     async def close(self):

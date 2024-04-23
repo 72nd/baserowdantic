@@ -11,7 +11,7 @@ import enum
 import random
 
 from typing import Annotated, Any, Literal, Optional, Union
-from pydantic import BaseModel, Field, IPvAnyAddress, RootModel
+from pydantic import UUID4, BaseModel, Field, IPvAnyAddress, RootModel
 
 
 def random_color() -> str:
@@ -70,7 +70,7 @@ class LongTextFieldConfig(FieldConfigBase):
     A long text field can contain long paragraphs or multiple lines of text.
     """
     type: Literal["long_text"] = "long_text"
-    long_text_enable_rich_text: bool = False
+    long_text_enable_rich_text: Optional[bool] = False
 
 
 class URLFieldConfig(FieldConfigBase):
@@ -114,7 +114,7 @@ class RatingFieldConfig(FieldConfigBase):
     type: Literal["rating"] = "rating"
     max_value: int = Field(default=5, ge=1, le=10)
     """Maximum value the rating can take."""
-    color: str = ""
+    color: str = Field(default_factory=random_color)
     """Color of the symbols."""
     style: RatingStyle = RatingStyle.STAR
     """Style of rating symbols."""
@@ -227,7 +227,7 @@ class LinkFieldConfig(FieldConfigBase):
     connecting data across tables with linked rows.
     """
     type: Literal["link_row"] = "link_row"
-    link_row_table_id: Optional[int] = None
+    link_row_table_id: int
     """The id of the linked table."""
     has_related_field: bool = False
 
@@ -242,7 +242,7 @@ class FileFieldConfig(FieldConfigBase):
 
 class SelectEntryConfig(BaseModel):
     """Config for a entry in a single or multiple select field."""
-    id: Optional[int] = None
+    id: int
     value: str = Field(max_length=255)
     color: str = Field(max_length=255, default_factory=random_color)
 
@@ -445,14 +445,24 @@ class Config:
         self.config = config
 
 
-DEFAULT_CONFIG_FOR_BUILT_IN_TYPES: dict[Any, FieldConfigBase] = {
+class PrimaryField:
+    """
+    An instance of this class is used to specify, via type annotations, the
+    field of the table that should act as the primary field. Only one field per
+    table can be set as the primary field.
+    """
+
+
+DEFAULT_CONFIG_FOR_BUILT_IN_TYPES: dict[Any, FieldConfigType] = {
     bool: BooleanFieldConfig(),
     bytes: TextFieldConfig(),
     date: DateFieldConfig(),
     datetime: DateFieldConfig(date_include_time=True),
     float: NumberFieldConfig(number_decimal_places=3),
     int: NumberFieldConfig(),
+    str: TextFieldConfig(),
     timedelta: DurationFieldConfig(),
+    UUID4: UUIDFieldConfig(),
 }
 """
 Dict mapping each built-in Python type to a Baserow filed config that should be

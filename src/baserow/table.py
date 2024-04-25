@@ -3,12 +3,12 @@ The module provides the ORM-like functionality of Baserowdantic.
 """
 
 
-import asyncio
 import abc
-from typing import Any, ClassVar, Generic, Optional, Self, Tuple, Type, TypeVar, Union, get_args, get_origin
+from functools import wraps
+from typing import Any, ClassVar, Generic, Optional, Tuple, Type, TypeVar, Union, get_args, get_origin
 import uuid
 
-from pydantic import BaseModel, ConfigDict, Field, RootModel, computed_field, field_validator, model_serializer, model_validator
+from pydantic import BaseModel, ConfigDict, Field, RootModel, model_serializer, model_validator
 from pydantic.fields import FieldInfo
 
 from baserow.client import Client, GlobalClient, MinimalRow
@@ -26,6 +26,7 @@ def valid_configuration(func):
     populate_by_name=True.
     """
 
+    @wraps(func)
     def wrapper(cls, *args, **kwargs):
         if not isinstance(cls.table_id, int):
             raise InvalidTableConfiguration(cls.__name__, "table_id not set")

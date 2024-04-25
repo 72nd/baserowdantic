@@ -5,6 +5,7 @@ This module handles the interaction with Baserow's REST API over HTTP.
 from __future__ import annotations
 import asyncio
 import enum
+from functools import wraps
 from io import BufferedReader
 from typing import Any, Generic, Optional, Type, TypeVar, Union
 
@@ -118,6 +119,7 @@ def jwt_only(func):
     `TokenAuthNotAllowedError` is thrown.
     """
 
+    @wraps(func)
     def wrapper(self, *args, **kwargs):
         if self._auth_method is not AuthMethod.JWT:
             raise JWTAuthRequiredError(func.__name__)

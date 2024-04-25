@@ -12,7 +12,7 @@ from pydantic import BaseModel, ConfigDict, Field, RootModel, model_serializer, 
 from pydantic.fields import FieldInfo
 
 from baserow.client import Client, GlobalClient, MinimalRow
-from baserow.error import InvalidFieldForCreateTableError, InvalidTableConfiguration, MultiplePrimaryFieldsError, NoClientAvailableError, NoPrimaryFieldError, PydanticGenericMetadataError, RowIDNotSetError
+from baserow.error import InvalidFieldForCreateTableError, InvalidTableConfigurationError, MultiplePrimaryFieldsError, NoClientAvailableError, NoPrimaryFieldError, PydanticGenericMetadataError, RowIDNotSetError
 from baserow.field import BaserowField
 from baserow.field_config import DEFAULT_CONFIG_FOR_BUILT_IN_TYPES, Config, FieldConfigType, LinkFieldConfig, PrimaryField
 from baserow.filter import Filter
@@ -29,11 +29,13 @@ def valid_configuration(func):
     @wraps(func)
     def wrapper(cls, *args, **kwargs):
         if not isinstance(cls.table_id, int):
-            raise InvalidTableConfiguration(cls.__name__, "table_id not set")
+            raise InvalidTableConfigurationError(
+                cls.__name__, "table_id not set")
         if not isinstance(cls.table_name, str):
-            raise InvalidTableConfiguration(cls.__name__, "table_name not set")
+            raise InvalidTableConfigurationError(
+                cls.__name__, "table_name not set")
         if "populate_by_name" not in cls.model_config:
-            raise InvalidTableConfiguration(
+            raise InvalidTableConfigurationError(
                 cls.__name__,
                 "populate_by_name is not set in the model config; it should most likely be set to true"
             )
@@ -166,6 +168,9 @@ class Table(BaseModel, abc.ABC):
     """
 
     row_id: Optional[int] = Field(default=None, alias=str("id"))
+    """
+    All rows in Baserow have a unique ID.
+    """
 
     @property
     @abc.abstractmethod
@@ -425,7 +430,8 @@ class Table(BaseModel, abc.ABC):
         """
         # Name is needed for table creation.
         if not isinstance(cls.table_name, str):
-            raise InvalidTableConfiguration(cls.__name__, "table_name not set")
+            raise InvalidTableConfigurationError(
+                cls.__name__, "table_name not set")
 
         # The primary field is determined at this point to ensure that any
         # exceptions (none, more than one primary field) occur before the

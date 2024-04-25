@@ -106,7 +106,7 @@ class UnspecifiedBaserowError(Exception):
         return f"Baserow returned an error with status code {self.status_code}: {self.body}"
 
 
-class InvalidTableConfiguration(Exception):
+class InvalidTableConfigurationError(Exception):
     """
     Raised when a Table model is not implemented correctly.
 

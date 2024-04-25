@@ -90,7 +90,7 @@ total_count = await client.table_row_count(table_id)
 
 In many applications, maintaining a consistent connection to a single Baserow instance throughout the runtime is crucial. To facilitate this, the package provides a [Global Client](https://alex-berlin-tv.github.io/baserowdantic/baserow/client.html#GlobalClient), which acts as a singleton. This means the client needs to be configured just once using GlobalClient.configure(). After this initial setup, the Global Client can be universally accessed and used throughout the program.
 
-When utilizing the ORM functionality of the table models, all methods within the table models inherently use this Global Client. Please note that the Global Client **can only be configured once**. Attempting to call the [`GlobalClient.configure()`](https://alex-berlin-tv.github.io/baserowdantic/baserow/client.html#GlobalClient) method more than once will result in an exception. 
+When utilizing the ORM functionality of the table models, all methods within the table models inherently use this Global Client. Please note that the Global Client **can only be configured once**. Attempting to call the [`GlobalClient.configure()`](https://alex-berlin-tv.github.io/baserowdantic/baserow/client.html#GlobalClient.configure) method more than once will result in an exception. 
 
 ```python
 from baserow import GlobalClient
@@ -320,19 +320,45 @@ client.create_database_field(
 
 The main motivation behind baserowdantic is to handle »everyday« CRUD (Create, Read, Update, Delete) interactions with Baserow through a model derived from pydantic's BaseModel called [`Table`](https://alex-berlin-tv.github.io/baserowdantic/baserow/table.html#Table). This Table model defines the structure and layout of a table in Baserow at a single location, thereby enabling validation of both input and output.
 
+The concept is straightforward: at a single point within the application, the data structure's layout in Baserow is defined within the Table model. Based on this model, the table can be created in Baserow, and all operations on the table can be performed. This approach also simplifies the deployment of applications that use Baserow as a backend, as it automatically sets up the required data structure during a new installation. Additionally, the validation functionalities ensure that the structure in the Baserow database matches the application's expectations.
+
+Contrary to what the name 'Table' suggests, an instance of it with data represents only a single row.
+
 
 ### Configure the model
 
 In order for a Table instance to interact with Baserow, it must first be configured using ClassVars.
 
-TODO.
+```python
+class Company(Table):
+    table_id = 23
+    table_name = "Company"
+    model_config = ConfigDict(populate_by_name=True)
+```
+
+The following properties need to be set:
+
+- [`table_id`](https://alex-berlin-tv.github.io/baserowdantic/baserow/table.html#Table.table_id): The unique ID of the Baserow table where the data represented by the model is stored. If the table does not yet exist and needs to be created, this attribute does not need to be set initially.
+- [`table_name`](https://alex-berlin-tv.github.io/baserowdantic/baserow/table.html#Table.table_name): A human-readable name for the table. This information is used when creating the table on Baserow and also aids in understanding debug outputs.
+- [`populate_by_name`](https://docs.pydantic.dev/latest/api/config/#pydantic.config.ConfigDict.populate_by_name): This Pydantic setting must be enabled with `model_config = ConfigDict(populate_by_name=True)`, as the ORM logic will not function without it.
+
+The methods of the model check whether the configuration is correct before executing any operations. If it is not, a [`InvalidTableConfigurationError`](https://alex-berlin-tv.github.io/baserowdantic/baserow/error.html#InvalidTableConfigurationError) is thrown.
 
 
 ### Define the model fields
 
-Table fields are defined in the usual Pydantic manner. For more complex field types (such as File, Single Select, etc.), baserowdantic defines its own models.
+Table fields are defined in the usual Pydantic manner. For the values of more complex field types (such as File, Single Select, etc.), baserowdantic defines its own models.
 
 TODO.
+row_id ist immer schon vorhanden
+
+Built-in Types wenn möglich.
+
+Spezifische Feldtypen
+
+Konfiguration
+
+Primary Field
 
 
 #### Link field

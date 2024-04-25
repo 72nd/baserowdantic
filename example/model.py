@@ -9,7 +9,7 @@ from pydantic import UUID4, ConfigDict, Field
 
 
 class Company(Table):
-    table_id = 1203
+    table_id = 23
     table_name = "Company"
     model_config = ConfigDict(populate_by_name=True)
 
@@ -32,8 +32,8 @@ class Qualification(str, enum.Enum):
     SOCIAL_WORKER = "Social worker"
 
 
-class PersonTable(Table):
-    table_id = 1201
+class Person(Table):
+    table_id = 42
     table_name = "Person"
     model_config = ConfigDict(populate_by_name=True)
 

@@ -54,25 +54,12 @@ The code snippets demonstrated in this README assume a specific database structu
   </ul>
 </details>
 
-The example code provided frequently references two specific data models: `Person` and `Company`. Definitions and schemas for these models can be found below.
-
-<details>
-  <summary>Person</summary>
-    ```python
-    from baserow import Client
-    ```
-</details>
-<details>
-  <summary>Company</summary>
-    ```python
-    from baserow import Client
-    ```
-</details>
+The example code provided frequently references two specific data models: `Person` and `Company`. You can find the `baserow.Table` Model definition in [examples/model.py](examples/model.py).
 
 
 ## Obtaining a Client
 
-The client manages the actual HTTP calls to the Baserow REST API. It can be used directly or, ideally, through the model abstraction provided by Pydantic, which is the primary purpose of this package.
+The [`Client`](https://alex-berlin-tv.github.io/baserowdantic/baserow/client.html#Client) manages the actual HTTP calls to the Baserow REST API. It can be used directly or, ideally, through the model abstraction provided by Pydantic, which is the primary purpose of this package.
 
 ### Authentication
 
@@ -101,9 +88,9 @@ total_count = await client.table_row_count(table_id)
 
 ### Singleton/Global Client
 
-In many applications, maintaining a consistent connection to a single Baserow instance throughout the runtime is crucial. To facilitate this, the package provides a Global Client, which acts as a singleton. This means the client needs to be configured just once using GlobalClient.configure(). After this initial setup, the Global Client can be universally accessed and used throughout the program.
+In many applications, maintaining a consistent connection to a single Baserow instance throughout the runtime is crucial. To facilitate this, the package provides a [Global Client](https://alex-berlin-tv.github.io/baserowdantic/baserow/client.html#GlobalClient), which acts as a singleton. This means the client needs to be configured just once using GlobalClient.configure(). After this initial setup, the Global Client can be universally accessed and used throughout the program.
 
-When utilizing the ORM functionality of the table models, all methods within the table models inherently use this Global Client. Please note that the Global Client **can only be configured once**. Attempting to call the `configure()` method more than once will result in an exception. 
+When utilizing the ORM functionality of the table models, all methods within the table models inherently use this Global Client. Please note that the Global Client **can only be configured once**. Attempting to call the [`GlobalClient.configure()`](https://alex-berlin-tv.github.io/baserowdantic/baserow/client.html#GlobalClient) method more than once will result in an exception. 
 
 ```python
 from baserow import GlobalClient
@@ -126,12 +113,12 @@ This setup ensures that your application maintains optimal performance by reusin
 
 ## Basic Client
 
-Even though Baserowdantic focuses on interacting with Pydantic using Pydantic data models, the Client class used can also be directly employed. The Client class provides CRUD (create, read, update, delete) operations on a Baserow table. It is entirely asynchronous.
+Even though Baserowdantic focuses on interacting with Pydantic using Pydantic data models, the Client class used can also be directly employed. The [Client class](https://alex-berlin-tv.github.io/baserowdantic/baserow/client.html#Client) provides CRUD (create, read, update, delete) operations on a Baserow table. It is entirely asynchronous.
 
 
 ### Count Table Rows
 
-This method returns the number of rows or records in a Baserow table. Filters can be optionally passed as parameters.
+[This method](https://alex-berlin-tv.github.io/baserowdantic/baserow/client.html#Client.table_row_count) returns the number of rows or records in a Baserow table. Filters can be optionally passed as parameters.
 
 ```python
 from baserow import Client, AndFilter
@@ -151,7 +138,7 @@ client.close()
 
 ### List Table Fields
 
-This function retrieves the fields (also known as rows) present in a specified table along with their configurations. The return value contains the information in the form of the `FieldConfig` model.
+[This function](https://alex-berlin-tv.github.io/baserowdantic/baserow/client.html#Client.list_fields) retrieves the fields (also known as rows) present in a specified table along with their configurations. The return value contains the information in the form of the `FieldConfig` model.
 
 ```python
 table_id = 23
@@ -161,7 +148,7 @@ print(await client.list_fields(table_id))
 
 ### List Table Rows
 
-The method reads the entries or records of a table in Baserow. It is possible to filter, sort, select one of the pages (Baserow API uses paging), and determine the number (size) of returned records (between 1 to 200). If it is necessary to retrieve all entries of a table, the method list_all_table_rows exists for this purpose. This method should be used with caution, as many API calls to Baserow may be triggered depending on the size of the table.
+[The method](https://alex-berlin-tv.github.io/baserowdantic/baserow/client.html#Client.list_table_rows) reads the entries or records of a table in Baserow. It is possible to filter, sort, select one of the pages (Baserow API uses paging), and determine the number (size) of returned records (between 1 to 200). If it is necessary to retrieve all entries of a table, the method [`Client().list_all_table_rows`](https://alex-berlin-tv.github.io/baserowdantic/baserow/client.html#Client.list_table_rows) exists for this purpose. This method should be used with caution, as many API calls to Baserow may be triggered depending on the size of the table.
 
 Setting the `result_type` parameter to a pydantic model the result will be deserialized into the given model. Otherwise a dict will be returned. 
 
@@ -185,9 +172,9 @@ all_person = await client.list_all_table_rows(table_id, True, result_type=Person
 
 ### Create Table Row(s)
 
-This method facilitates the creation of one or more records in a specific table, identified by its ID. Data for the records can be provided either as a dictionary or as an instance of a BaseModel. This flexibility allows users to choose the format that best suits their needs, whether it's a simple dictionary for less complex data or a BaseModel for more structured and type-safe data handling.
+This methods facilitates the creation [of one](https://alex-berlin-tv.github.io/baserowdantic/baserow/client.html#Client.create_row) or [multiple records](https://alex-berlin-tv.github.io/baserowdantic/baserow/client.html#Client.create_rows) in a specific table, identified by its ID. Data for the records can be provided either as a dictionary or as an instance of a `BaseModel`. This flexibility allows users to choose the format that best suits their needs, whether it's a simple dictionary for less complex data or a `BaseModel` for more structured and type-safe data handling.
 
-To create multiple records at once, you can use the create_rows() method. This uses Baserow's batch functionality and thus minimizes the number of API calls required to one.
+To create multiple records at once, you can use the `Client().create_rows()` method. This uses Baserow's batch functionality and thus minimizes the number of API calls required to one.
 
 ```python
 table_id = 23
@@ -208,7 +195,7 @@ client.create_rows(
 
 ### Update Table Row
 
-This method updates a specific row (entry) within a table. Both the table and the row are identified by their unique IDs. The data for the update can be provided either as a Pydantic model or as a dictionary.
+[This method](https://alex-berlin-tv.github.io/baserowdantic/baserow/client.html#Client.update_row) updates a specific row (entry) within a table. Both the table and the row are identified by their unique IDs. The data for the update can be provided either as a Pydantic model or as a dictionary.
 
 - Using a Dictionary: More commonly, a dictionary is used for targeted updates, allowing specific fields within the row to be modified. This method makes more sense in most cases where only certain fields need adjustment, rather than a full update.
 - Using a Pydantic Model: When a Pydantic model is used, all values present within the model are applied to the row. This approach is comprehensive, as it updates all fields represented in the model.
@@ -232,9 +219,9 @@ The method returns the complete updated row.
 
 ### Upload a file
 
-In the File field type, files can be stored. For this purpose, the file must first be uploaded to Baserow's storage. This can be done either with a local file read using open(...) or with a file accessible via a public URL. The method returns a `field.File` instance with all information about the uploaded file.
+In the [`File` field type](https://alex-berlin-tv.github.io/baserowdantic/baserow/field.html#File), files can be stored. For this purpose, the file must first be uploaded to Baserow's storage. This can be done either with a local file read using open(...) or with a file accessible via a public URL. The method returns a `field.File` instance with all information about the uploaded file.
 
-After the file is uploaded, it needs to be linked to the field in the table row.  For this, either the complete `field.File` instance can be passed to the File field or simply an object containing the name (`field.File.name`, the name is unique in any case).
+After the file is uploaded, it needs to be linked to the field in the table row. For this, either the complete `field.File` instance can be passed to the File field or simply an object containing the name ([`field.File.name`](https://alex-berlin-tv.github.io/baserowdantic/baserow/field.html#File.name), the name is unique in any case). The updated row data is then updated to Baserow.
 
 ```python
 # Upload a local file.
@@ -268,7 +255,7 @@ await GlobalClient().update_row(
 
 ### Delete Table Row(s)
 
-This method is used to delete one or more rows within a specified table. Both the table and the row are identified by their unique IDs.
+[This method](https://alex-berlin-tv.github.io/baserowdantic/baserow/client.html#Client.delete_row) is used to delete one or more rows within a specified table. Both the table and the row are identified by their unique IDs.
 
 ```python
 table_id = 23
@@ -285,7 +272,7 @@ On success the method returns `None` otherwise an exception will be thrown.
 
 ### Create Database Tables
 
-This method facilitates the creation of a new table within a specified database, identified by the unique ID of the database. A human-readable name for the table must be provided. It's also possible to integrate the table creation action into the undo tree of a client session or an action group. This can be accomplished using optional parameters provided in the method.
+[This method](https://alex-berlin-tv.github.io/baserowdantic/baserow/client.html#Client.create_database_table) facilitates the creation of a new table within a specified database, identified by the unique ID of the database. A human-readable name for the table must be provided. It's also possible to integrate the table creation action into the undo tree of a client session or an action group. This can be accomplished using optional parameters provided in the method.
 
 For additional details on these optional parameters and other functionalities, please refer to the code documentation of this package and the Baserow documentation.
 
@@ -298,7 +285,7 @@ await client.create_database_table(database_id, "Cars")
 
 ### List Tables in Database
 
-This method retrieves a list of all tables within a specified database. The result includes essential information about each table, such as its ID and name.
+[This method](https://alex-berlin-tv.github.io/baserowdantic/baserow/client.html#Client.list_database_tables) retrieves a list of all tables within a specified database. The result includes essential information about each table, such as its ID and name.
 
 ```python
 database_id = 19
@@ -309,9 +296,13 @@ print(rsl)
 ```
 
 
-### Create Table Fields
+### Create, Update and Delete Table Fields
 
-This method is used to add a new field to an existing table, which is identified by its ID. Each call to this method can add one field. You can use any field configuration that is part of the FieldConfigType.
+"The Client class supports the [creation](https://alex-berlin-tv.github.io/baserowdantic/baserow/client.html#Client.create_database_table_field), [updating](https://alex-berlin-tv.github.io/baserowdantic/baserow/client.html#Client.update_database_table_field), and [deletion](https://alex-berlin-tv.github.io/baserowdantic/baserow/client.html#Client.delete_database_table_field) of table fields (referred to as 'Rows')."
+
+For both creating and updating a field, the appropriate instance of [`FieldConfigType`](https://alex-berlin-tv.github.io/baserowdantic/baserow/field_config.html#FieldConfigType) is provided. For each field type in Baserow, there is a corresponding field config class that supports the specific settings of the field.
+
+To modify selected properties of an existing field, the configuration of the field can be retrieved using [`Client().list_fields()`](https://alex-berlin-tv.github.io/baserowdantic/baserow/client.html#Client.list_fields), the resulting object can then be modified and subsequently updated.
 
 
 ```python
@@ -327,7 +318,7 @@ client.create_database_field(
 
 ## ORM-like access using models
 
-The main motivation behind baserowdantic is to handle »everyday« CRUD (Create, Read, Update, Delete) interactions with Baserow through a model derived from pydantic's BaseModel called Table. This Table model defines the structure and layout of a table in Baserow at a single location, thereby enabling validation of both input and output.
+The main motivation behind baserowdantic is to handle »everyday« CRUD (Create, Read, Update, Delete) interactions with Baserow through a model derived from pydantic's BaseModel called [`Table`](https://alex-berlin-tv.github.io/baserowdantic/baserow/table.html#Table). This Table model defines the structure and layout of a table in Baserow at a single location, thereby enabling validation of both input and output.
 
 
 ### Configure the model

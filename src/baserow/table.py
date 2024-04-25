@@ -134,6 +134,30 @@ class TableLinkField(BaserowField, RootModel[list[RowLink]], Generic[T]):
         """Returns a list of all ID's as string for debugging."""
         return ",".join([str(link.row_id) for link in self.root])
 
+    def link(self, instance: int | T):
+        """
+        Add a link to the given table row. Please note that this method does not
+        update the record on Baserow. You have to call `Table.update()`
+        afterwards.
+
+        Args:
+            instance (int | T): The record which should be linked to. Can be the
+                unique row ID or a instance of `Table` with `Table.row_id` set.
+        """
+        if isinstance(instance, int):
+            row_id = instance
+        else:
+            if instance.row_id is None:
+                raise RowIDNotSetError(
+                    self.__class__.__name__,
+                    "TableLinkField.link()",
+                )
+            row_id = instance.row_id
+        self.root.append(RowLink(
+            row_id=row_id,
+            key=None,
+        ))
+
     async def query_linked_rows(self) -> list[T]:
         """
         Queries and returns all linked rows.
@@ -293,7 +317,7 @@ class Table(BaseModel, abc.ABC):
 
     @classmethod
     @valid_configuration
-    async def update_by_id(
+    async def update_fields_by_id(
         cls: Type[T],
         row_id: int,
         by_alias: bool = True,
@@ -392,7 +416,7 @@ class Table(BaseModel, abc.ABC):
         return rsl
 
     @valid_configuration
-    async def update(
+    async def update_fields(
         self: T,
         by_alias: bool = True,
         **kwargs: Any,
@@ -404,8 +428,23 @@ class Table(BaseModel, abc.ABC):
         documentation of this method.
         """
         if self.row_id is None:
+            raise RowIDNotSetError(self.__class__.__name__, "field_update")
+        return await self.update_fields_by_id(self.row_id, by_alias, **kwargs)
+
+    @valid_configuration
+    async def update(self: T) -> T | MinimalRow:
+        """
+        Updates all fields of a row with the data of this model instance. The
+        row_id field must be set.
+        """
+        if self.row_id is None:
             raise RowIDNotSetError(self.__class__.__name__, "update")
-        return await self.update_by_id(self.row_id, by_alias, **kwargs)
+        return await self.__req_client().update_row(
+            self.table_id,
+            self.row_id,
+            self.model_dump(by_alias=True, mode="json", exclude_none=True),
+            True
+        )
 
     @valid_configuration
     async def delete(self):

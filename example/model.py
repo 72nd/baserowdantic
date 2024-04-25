@@ -13,7 +13,6 @@ class Company(Table):
     table_name = "Company"
     model_config = ConfigDict(populate_by_name=True)
 
-    row_id: Optional[int] = Field(alias=str("id"), default=None)
     name: str = Field(alias=str("Name"))
     email: Optional[str] = Field(default=None, alias=str("E-Mail"))
 

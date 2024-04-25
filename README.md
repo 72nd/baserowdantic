@@ -330,6 +330,10 @@ Contrary to what the name 'Table' suggests, an instance of it with data represen
 In order for a Table instance to interact with Baserow, it must first be configured using ClassVars.
 
 ```python
+from baserow.table import Table
+from pydantic import ConfigDict
+
+
 class Company(Table):
     table_id = 23
     table_name = "Company"
@@ -347,26 +351,98 @@ The methods of the model check whether the configuration is correct before execu
 
 ### Define the model fields
 
-Table fields are defined in the usual Pydantic manner. For the values of more complex field types (such as File, Single Select, etc.), baserowdantic defines its own models.
+The definition of fields in a table is done in a manner similar to what is [expected from Pydantic](https://docs.pydantic.dev/latest/concepts/fields/). Whenever possible, the values of the fields are de-/serialized to/from Python's built-in types. The value of a text field is converted to a `str`, a number field is serialized to an `int` or `float`, and a date field to a `datetime.datetime` object. In certain cases, the data type of the field values is more complex than can be represented by a built-in data type. This is the case, for example, with [File](https://alex-berlin-tv.github.io/baserowdantic/baserow/field.html#File) or [Single-Select](https://alex-berlin-tv.github.io/baserowdantic/baserow/field.html#SingleSelectField) fields. The definitions for these field values can be found in the [`field`](https://alex-berlin-tv.github.io/baserowdantic/baserow/field.html) module.
 
-TODO.
-row_id ist immer schon vorhanden
+```python
+from typing import Optional
 
-Built-in Types wenn möglich.
+from baserow.table import Table
+from pydantic import ConfigDict
 
-Spezifische Feldtypen
+class Company(Table):
+    table_id = 23
+    table_name = "Company"
+    model_config = ConfigDict(populate_by_name=True)
 
-Konfiguration
+    name: str = Field(alias=str("Name"))
+    email: Optional[str] = Field(default=None, alias=str("E-Mail"))
+```
 
-Primary Field
+Every row in Baserow includes the field id, which contains the unique ID of the row. This field is already defined as [`row_id`](https://alex-berlin-tv.github.io/baserowdantic/baserow/table.html#RowLink.row_id) in the Table model.
+
+In Baserow, a field has a type in addition to its value. The type of field cannot always be inferred from the value alone. For instance, a value of type `str` appear in both a Short Text Field and Long Text Field. Certain field types have even more configurable settings available. For example, a rating field might require specifying the color and shape of the rating scale. Similarly, for Single or Multiple Select Fields, the possible options must be defined. These configurations are managed through what are known as field configs, summarized under [`FieldConfigType`](https://alex-berlin-tv.github.io/baserowdantic/baserow/field_config.html#FieldConfigType). By using type annotations of a field config encapsulated in a [`Config`](https://alex-berlin-tv.github.io/baserowdantic/baserow/field_config.html#Config) wrapper, it is possible to configure the desired field type and its properties. All available field configs can be found in the [`field_config`](https://alex-berlin-tv.github.io/baserowdantic/baserow/field_config.html) module.
+
+Furthermore, it is necessary for each table to have **exactly one primary field**. This is defined by passing an instance of [`PrimaryField`](https://alex-berlin-tv.github.io/baserowdantic/baserow/field_config.html#PrimaryField) to a field via typing annotations.
+
+```python
+from typing import Annotated, Optional
+
+from baserow.field_config import Config, LongTextFieldConfig, PrimaryField
+from baserow.table import Table
+from pydantic import ConfigDict
+
+
+class Person(Table):
+    # Table config omitted.
+
+    name: Annotated[
+        str,
+        Field(alias=str("Name")),
+        PrimaryField(),
+    ]
+    cv: Annotated[
+        Optional[str],
+        Config(LongTextFieldConfig(long_text_enable_rich_text=True)),
+        Field(alias=str("CV")),
+    ]
+```
+
+In this example, you can observe several things:
+
+- The `name` field is declared as the primary field.
+- The `cv` field is configured as a long text field with rich text formatting enabled.
+
+Subsequently, a variety of fields and their configurations will be introduced.
 
 
 #### Link field
 
-TODO: General.
+In Baserow, the Link field allows linking a record of one table with record(s) from another table. Baserowdantic not only offers an ergonomic configuration of these relationships but also provides easy access to the linked records (which can even be cached, if desired). Let's consider an example:
 
-TODO: Get values of linked rows.
+```python
+from typing import Annotated, Optional
 
+from baserow.field_config import Config, PrimaryField
+from baserow.table import Table, TableLinkField
+from pydantic import ConfigDict
+
+
+class Company(Table):
+    table_id = 23
+    table_name = "Company"
+    model_config = ConfigDict(populate_by_name=True)
+
+    name: str = Field(alias=str("Name"))
+    email: Optional[str] = Field(default=None, alias=str("E-Mail"))
+
+
+class Person(Table):
+    table_id = 42
+    table_name = "Person"
+    model_config = ConfigDict(populate_by_name=True)
+
+    name: str = Field(alias=str("Name"))
+    former_employees: Optional[TableLinkField[Company]] = Field(
+        default=None,
+        alias=str("Former Employers"),
+    )
+```
+
+In this example, each entry in the People table can refer to entries in the Company table. The model can now be used as follows:
+
+```python
+
+```
 
 #### File field
 

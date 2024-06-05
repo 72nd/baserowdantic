@@ -1,8 +1,8 @@
-# baserowdantic
-
 <p align="center">
   <img src="misc/town.png" alt="AI-generated image of an old town with a prominent town sign reading ‘Baserow’ on it." height="200">
 </p>
+
+# baserowdantic
 
 **Caution:** This project is in active development and should currently be considered alpha. Therefore, bugs and (fundamental) breaking changes to the API can occur at any time.
 

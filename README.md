@@ -1,6 +1,8 @@
 <p align="right">
-  <source media="(prefers-color-scheme: dark)" width="160" srcset="misc/toc-indicator-dark.png">
-  <img src="misc/toc-indicator-light.svg" width="160" alt="table of contents button location hint">
+<picture>
+  <source media="(prefers-color-scheme: dark)" width="160" srcset=".misc/toc-indicator-dark.svg">
+  <img alt="arrow pointing on the table of content button" width="160" src="./misc/toc-indicator-light.svg">
+</picture>
 </p>
 <p align="center">
   <img src="misc/town.png" alt="AI-generated image of an old town with a prominent town sign reading ‘Baserow’ on it." height="200">

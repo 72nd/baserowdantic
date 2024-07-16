@@ -1,3 +1,8 @@
+<p align="right">
+  <picture>
+    <img src="misc/toc-indicator-dark.png" alt="Description of the image">
+  </picture>
+</p>
 <p align="center">
   <img src="misc/town.png" alt="AI-generated image of an old town with a prominent town sign reading ‘Baserow’ on it." height="200">
 </p>
@@ -14,6 +19,19 @@ This package provides a [CRUD](https://en.wikipedia.org/wiki/Create,_read,_updat
 
 As such, it is quite opinionated and supports only a small subset of the API. Users seeking more functionality may consider alternatives like the [python-baserow-client](https://github.com/NiklasRosenstein/python-baserow-client). Interaction with Baserow is facilitated through the definition of Pydantic models, ensuring data validation. The library is written to be fully asynchronous, integrating well with frameworks such as [FastAPI](https://fastapi.tiangolo.com/).
 
+The package can be used in two different ways:
+
+1. [Direct Editing with API Basic Client](#basic-client): You can directly edit with Baserow using the API Basic Client.
+2. [Executing Actions on a Pydantic Model](#orm-like-access-using-models): Actions can be executed on a pydantic model. In this case, the table structure only needs to be defined once, and the library uses this information for all actions such as creating tables, reading and writing entries, and more.
+
+## Demo / Introduction Example
+
+Still unsure what this is all about? Here's an example to give you a first impression of using baserowdantic:
+
+The example models a simplified version of a library database. There is a table of authors and a table of books. The books table references the corresponding author's entry and can store the cover image. This example is also available as a file [here](example/basic_orm.py).
+
+```python
+```
 
 ## Note on the Examples Provided
 
@@ -460,6 +478,11 @@ TODO.
 TODO.
 
 ### Validate
+
+TODO.
+
+
+### Create a table
 
 TODO.
 

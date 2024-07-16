@@ -27,12 +27,86 @@ The package can be used in two different ways:
 
 ## Demo / Introduction Example (TODO Title)
 
-Still unsure what this is all about? Here's an example to give you a first impression of using baserowdantic:
+Abstract introductions not your thing? This example offers a hands-on look at the ORM capabilities of baserowdantic. You can find a running version of this code at [example/basic_orm.py](example/basic_orm.py).
 
-The example models a simplified version of a library database. There is a table of authors and a table of books. The books table references the corresponding author's entry and can store the cover image. This example is also available as a file [here](example/basic_orm.py).
+The example models a simplified version of a library database. There is a table of authors and a table of books. The books table references the corresponding author's entry and can store the cover image.
+
+### Client
+
+The connection to Baserow is managed through a client object. For this simple example, we will define a global client singleton which is used by default in all methods. Authentication is possible with a token or with login credentials. Creating tables requires login with credentials.
 
 ```python
+GlobalClient.configure(
+    "https://your.baserow.instance",
+    email="your-login-mail@example.com",
+    password="your-secret-password",
+)
 ```
+
+### Defining the Models
+
+First, we need to define the structure of the two tables (authors and books) in a model. Please note the class variables table_id and table_name. These link the model to the corresponding table in Baserow.
+
+```python
+class Author(Table):
+    # This class variable defines the ID of the table in Baserow. It can be
+    # omitted if the table has not been created yet.
+    table_id = 1398
+    # Name of the Table in Baserow.
+    table_name = "Author"
+    # This model_config is necessary, otherwise it won't work.
+    model_config = ConfigDict(populate_by_name=True)
+
+    # Defines the name field as the primary field in Baserow
+    name: Annotated[str, Field(alias=str("Name")), PrimaryField()]
+    # Use the alias annotation if the field name in Baserow differs from the
+    # variable name.
+    age: int = Field(alias=str("Age"))
+
+
+# Baserow has a single select field. This can be mapped to enums.
+
+class Genre(str, enum.Enum):
+    FICTION = "Fiction"
+    EDUCATION = "Education"
+    MYSTERY = "Mystery"
+
+
+class Book(Table):
+    table_id = 1399
+    table_name = "Book"
+    model_config = ConfigDict(populate_by_name=True)
+
+    title: Annotated[str, Field(alias=str("Title")), PrimaryField()]
+    # Link to the Author.
+    author: Optional[TableLinkField[Author]] = Field(
+        default=None,
+        alias=str("Author"),
+    )
+    # A single select field.
+    genre: Optional[SingleSelectField[Genre]] = Field(
+        default=None,
+        alias=str("Genre"),
+    )
+    # Store files like a cover image.
+    cover: Optional[FileField] = Field(
+        default=None,
+        alias=str("Cover"),
+    )
+```
+
+### Create the tables
+
+TODO.
+
+### Add some records
+
+TODO.
+
+### Alter and delete some records
+
+TODO.
+
 
 ## Note on the Examples Provided
 

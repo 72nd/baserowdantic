@@ -12,6 +12,12 @@ dependencies = [
     "pydantic"
 ]
 
+[project.optional-dependencies]
+# Optional dependency to build the documentation.
+doc = [
+    "pdoc"
+]
+
 classifiers = [
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3.9",

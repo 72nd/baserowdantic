@@ -214,6 +214,7 @@ class TableLinkField(BaserowField, RootModel[list[RowLink]], Generic[T]):
                 row_id=row_id,
                 key=None,
             ))
+            self.register_pending_change(f"link to entry {row_id} added")
 
     def clear(self):
         """
@@ -221,6 +222,7 @@ class TableLinkField(BaserowField, RootModel[list[RowLink]], Generic[T]):
         to apply the changes.
         """
         self = self.from_value([])
+        self.register_pending_change("all links removed")
 
     async def query_linked_rows(self) -> list[T]:
         """
@@ -503,12 +505,16 @@ class Table(BaseModel, abc.ABC):
         """
         if self.row_id is None:
             raise RowIDNotSetError(self.__class__.__name__, "update")
-        return await self.__req_client().update_row(
+        rsl = await self.__req_client().update_row(
             self.table_id,
             self.row_id,
             self.model_dump(by_alias=True, mode="json", exclude_none=True),
             True
         )
+        for _, field in self.__dict__.items():
+            if isinstance(field, BaserowField):
+                field.changes_applied()
+        return rsl
 
     @valid_configuration
     async def delete(self):

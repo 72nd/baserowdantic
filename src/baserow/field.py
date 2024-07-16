@@ -53,12 +53,47 @@ class BaserowField(BaseModel, abc.ABC):
     """
     Abstract base class for all Baserow fields that are not covered by the
     built-in types.
+
+    This class also handles tracking changes, which are initially local and only
+    applied to Baserow when Table.update() is called. For example, the method
+    TableLinkField.append() adds a new link to a record, but this change is only
+    written to Baserow when Table.update() is invoked. Such actions can be
+    registered with BaserowField.register_pending_change(). If an object with
+    pending changes is deleted (__del__), a corresponding warning is issued.
     """
 
     @classmethod
     @abc.abstractmethod
     def default_config(cls) -> FieldConfigType:
         """Returns the default field config for a given field type."""
+
+    _pending_changes: list[str] = []
+
+    def register_pending_change(self, description: str):
+        """
+        Registers a change to the field, which is currently only stored locally
+        and must be explicitly applied to Baserow using `Table.update()`.
+
+        Args:
+            description (str): A description of the change in data.
+        """
+        self._pending_changes.append(description)
+
+    def changes_applied(self):
+        """
+        Is called by `Table.update()` after all pending changes have been
+        written to Baserow.
+        """
+        self._pending_changes = []
+
+    def __del__(self):
+        if len(self._pending_changes) != 0:
+            changes = ["- " + change for change in self._pending_changes]
+            print(f"WARNING: THERE ARE STILL PENDING CHANGES IN FIELD {self.__class__.__name__}")  # noqa: F821
+            print("\n".join(changes))
+            print(
+                "It looks like `Table.update()` was not called to apply these changes to Baserow.",
+            )
 
 
 class User(BaseModel):
@@ -335,6 +370,7 @@ class SingleSelectField(SelectEntry[SelectEnum], BaserowField):
         self.entry_id = None
         self.value = instance
         self.color = None
+        self.register_pending_change(f"set SingleSelect to '{instance.value}'")
 
 
 class MultipleSelectField(BaserowField, RootModel[list[SelectEntry]], Generic[SelectEnum]):

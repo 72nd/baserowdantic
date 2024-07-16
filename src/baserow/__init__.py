@@ -3,7 +3,6 @@
    :start-after: baserowdantic
 """
 
-import atexit
 from importlib import util as importlib_util
 
 # Tweaks the rendering of the documentation's table of contents to show three

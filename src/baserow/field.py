@@ -314,14 +314,15 @@ class SingleSelectField(SelectEntry[SelectEnum], BaserowField):
             genre=SingleSelectField.from_enum(Genre.FICTION),
         ).create()
 
-        # ...instead of await Book(
+        # ...instead of
+        await Book(
             genre=SingleSelectField[Genre](value=Genre.FICTION)
         ).create() ```
 
         Args:
             select_enum (SelectEnum): Enum to which the field should be set.add 
         """
-        return SingleSelectField[SelectEnum](value=select_enum)
+        return SingleSelectField[type(select_enum)](value=select_enum)
 
     def set(self, instance: SelectEnum):
         """

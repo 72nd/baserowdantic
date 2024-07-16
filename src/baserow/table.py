@@ -130,6 +130,51 @@ class TableLinkField(BaserowField, RootModel[list[RowLink]], Generic[T]):
         linked_table = metadata["args"][0]
         return LinkFieldConfig(link_row_table_id=linked_table.table_id)
 
+    @classmethod
+    def from_value(cls, instance: int | T | list[int | T]):
+        """
+        Instantiates a link field from a referencing value. Can be used to set a
+        link directly when instantiating a table model using a parameter. This
+        is a quality of life feature and replace the tedious way of manually
+        defining a link. For more information please refer to the example below.
+
+        ```python
+        class Author(Table):
+            [...] name: str
+
+        class Book(Table):
+            [...] title: str author: Optional[TableLinkField[Author]] =
+            Field(default=None)
+
+        # Instead of... new_book = await Book(
+            title="The Great Adventure", author=TableLinkField[Author](
+                root=[RowLink[Author](row_id=23, key=None)]
+            )
+        ).create()
+
+        # ...this method allows this (link to author row with id=23) new_book =
+        await Book(
+            title="The Great Adventure",
+            author=TableLinkField[Author].from_value(23),
+        ).create() ```
+
+        Args:
+            instance (int | T | list[int | T]): Instance(s) or row id(s) to be
+                linked.
+        """
+        rsl = cls(root=[])
+        items: list[int | T] = []
+        if not isinstance(instance, list):
+            items = [instance]
+        else:
+            items = instance
+        for item in items:
+            if isinstance(item, int):
+                rsl.root.append(RowLink[T](row_id=item, key=None))
+            else:
+                rsl.root.append(RowLink[T](row_id=item.row_id, key=None))
+        return rsl
+
     def id_str(self) -> str:
         """Returns a list of all ID's as string for debugging."""
         return ",".join([str(link.row_id) for link in self.root])

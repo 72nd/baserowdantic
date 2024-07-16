@@ -8,6 +8,7 @@ import abc
 from datetime import datetime
 import enum
 from io import BufferedReader
+from types import ClassMethodDescriptorType
 from typing import TYPE_CHECKING, Generic, Optional, TypeVar, Union, get_args, get_origin, get_overloads
 
 from pydantic import BaseModel, ConfigDict, Field, RootModel, model_serializer, model_validator
@@ -228,9 +229,9 @@ values of the select entry.
 
 class SelectEntry(BaseModel, Generic[SelectEnum]):
     """A entry in a single or multiple select field."""
-    entry_id: Optional[int] = Field(alias="id")
-    value: Optional[SelectEnum]
-    color: Optional[str]
+    entry_id: Optional[int] = Field(default=None, alias="id")
+    value: Optional[SelectEnum] = None
+    color: Optional[str] = None
 
     model_config = ConfigDict(populate_by_name=True)
 
@@ -292,6 +293,51 @@ class SingleSelectField(SelectEntry[SelectEnum], BaserowField):
     def default_config(cls) -> FieldConfigType:
         options = super(SingleSelectField, cls)._options_config()
         return SingleSelectFieldConfig(select_options=options)
+
+    @classmethod
+    def from_enum(cls, select_enum: SelectEnum):
+        """
+        This function can be used to directly obtain the correct instance of the
+        field abstraction from an enum. Primarily, this function is a quality of
+        life feature and replaces a syntax that is somewhat unergonomic and
+        unintuitive. As shown in the example:
+
+        ```python
+        class Genre(str, enum.Enum):
+            FICTION = "Fiction"
+            EDUCATION = "Education"
+
+        class Book(Table):
+            [...]
+            genre: Optional[SingleSelectField[Genre]] = Field(default=None)
+
+        # Can use this...
+        await Book(
+            genre=SingleSelectField.from_enum(Genre.FICTION),
+        ).create()
+
+        # ...instead of
+        await Book(
+            genre=SingleSelectField[Genre](value=Genre.FICTION)
+        ).create()
+        ```
+
+        Args:
+            select_enum (SelectEnum): Enum to which the field should be set.add 
+        """
+        return SingleSelectField[SelectEnum](value=select_enum)
+
+    def set(self, instance: SelectEnum):
+        """
+        Set the value of the field. Please note that this method does not update
+        the record on Baserow. You have to call `Table.update()` afterwards.
+
+        Args:
+            instance (SelectEnum): The enum which should be set in this field.
+        """
+        self.entry_id = None
+        self.value = instance
+        self.color = None
 
 
 class MultipleSelectField(BaserowField, RootModel[list[SelectEntry]], Generic[SelectEnum]):

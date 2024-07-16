@@ -15,7 +15,7 @@
 This package provides a [CRUD](https://en.wikipedia.org/wiki/Create,_read,_update_and_delete) (Create, Read, Update, Delete) client for [Baserow](https://baserow.io/), an open-source alternative to Airtable. Baserow offers a spreadsheet-like interface in the browser for accessing a relational database. Currently, there are numerous (partial) implementations of the Baserow API in Python. baserowdantic emerged from our specific needs and aims to achieve the following:
 
 - Support CRUD operations on Baserow tables.
-- Always validate data and benefit from the many conveniences of [Pydantic](https://pydantic.dev/).
+- Optionally abstract the operations to a [Pydantic](https://pydantic.dev/)-like model with all the benefits of Pydantic (validation, automatic (de-)serialization of data). This is what is understood as [ORM](https://en.wikipedia.org/wiki/Object%E2%80%93relational_mapping)-like.
 - Be fully asynchronous.
 
 As such, it is quite opinionated and supports only a small subset of the API. Users seeking more functionality may consider alternatives like the [python-baserow-client](https://github.com/NiklasRosenstein/python-baserow-client). Interaction with Baserow is facilitated through the definition of Pydantic models, ensuring data validation. The library is written to be fully asynchronous, integrating well with frameworks such as [FastAPI](https://fastapi.tiangolo.com/).
@@ -25,7 +25,7 @@ The package can be used in two different ways:
 1. [Direct Editing with API Basic Client](#basic-client): You can directly edit with Baserow using the API Basic Client.
 2. [Executing Actions on a Pydantic Model](#orm-like-access-using-models): Actions can be executed on a pydantic model. In this case, the table structure only needs to be defined once, and the library uses this information for all actions such as creating tables, reading and writing entries, and more.
 
-## Demo / Introduction Example
+## Demo / Introduction Example (TODO Title)
 
 Still unsure what this is all about? Here's an example to give you a first impression of using baserowdantic:
 

@@ -1,7 +1,7 @@
 <p align="right">
 <picture>
-  <source media="(prefers-color-scheme: dark)" width="160" srcset=".misc/toc-indicator-dark.svg">
-  <img alt="arrow pointing on the table of content button" width="160" src="./misc/toc-indicator-light.svg">
+  <source media="(prefers-color-scheme: dark)" width="160" srcset="misc/toc-indicator-dark.svg">
+  <img alt="arrow pointing on the table of content button" width="160" src="misc/toc-indicator-light.svg">
 </picture>
 </p>
 <p align="center">

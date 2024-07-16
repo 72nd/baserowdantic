@@ -5,7 +5,7 @@
 </picture>
 </p>
 <p align="center">
-  <img src="misc/town.png" alt="AI-generated image of an old town with a prominent town sign reading ‘Baserow’ on it." height="200">
+  <img src="misc/logo.svg" alt="" width="350">
 </p>
 
 # baserowdantic

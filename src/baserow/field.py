@@ -233,6 +233,14 @@ class FileField(BaserowField, RootModel[list[File]]):
         if register_pending_change:
             self.register_pending_change(f"file from url '{url}' added")
 
+    def clear(self):
+        """
+        Removes all files from field. After that, `Table.update()` must be called
+        to apply the changes.
+        """
+        self = FileField(root=[])
+        self.register_pending_change("remove all files in field")
+
 
 SelectEnum = TypeVar("SelectEnum", bound=enum.Enum)
 """

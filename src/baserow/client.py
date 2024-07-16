@@ -13,7 +13,7 @@ import aiohttp
 from pydantic import BaseModel, RootModel
 
 from baserow.error import BaserowError, JWTAuthRequiredError, PackageClientAlreadyConfiguredError, PackageClientNotConfiguredError, UnspecifiedBaserowError
-from baserow.field import File
+from baserow.file import File
 from baserow.field_config import FieldConfig, FieldConfigType
 from baserow.filter import Filter
 

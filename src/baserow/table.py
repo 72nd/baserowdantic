@@ -171,6 +171,11 @@ class TableLinkField(BaserowField, RootModel[list[RowLink]], Generic[T]):
         for item in items:
             if isinstance(item, int):
                 rsl.root.append(RowLink[T](row_id=item, key=None))
+            elif item.row_id is None:
+                raise RowIDNotSetError(
+                    cls.__name__,
+                    "TableLinkField.link()",
+                )
             else:
                 rsl.root.append(RowLink[T](row_id=item.row_id, key=None))
         return rsl
@@ -179,29 +184,43 @@ class TableLinkField(BaserowField, RootModel[list[RowLink]], Generic[T]):
         """Returns a list of all ID's as string for debugging."""
         return ",".join([str(link.row_id) for link in self.root])
 
-    def link(self, instance: int | T):
+    def append(self, instance: int | T | list[int | T]):
         """
-        Add a link to the given table row. Please note that this method does not
-        update the record on Baserow. You have to call `Table.update()`
-        afterwards.
+        Add a link to the given table row(s). Please note that this method does
+        not update the record on Baserow. You have to call `Table.update()`
+        to apply the changes.
 
         Args:
-            instance (int | T): The record which should be linked to. Can be the
-                unique row ID or a instance of `Table` with `Table.row_id` set.
+            instance (int | T | list[int | T]): Instance(s) or row id(s) to be
+                added. When using a `Table` instance make sure that
+                `Table.row_id` is set.
         """
-        if isinstance(instance, int):
-            row_id = instance
+        items: list[int | T] = []
+        if not isinstance(instance, list):
+            items = [instance]
         else:
-            if instance.row_id is None:
+            items = instance
+        for item in items:
+            if isinstance(item, int):
+                row_id = item
+            elif item.row_id is None:
                 raise RowIDNotSetError(
                     self.__class__.__name__,
                     "TableLinkField.link()",
                 )
-            row_id = instance.row_id
-        self.root.append(RowLink(
-            row_id=row_id,
-            key=None,
-        ))
+            else:
+                row_id = item.row_id
+            self.root.append(RowLink(
+                row_id=row_id,
+                key=None,
+            ))
+
+    def clear(self):
+        """
+        Deletes all linked entries. After that, `Table.update()` must be called
+        to apply the changes.
+        """
+        self = self.from_value([])
 
     async def query_linked_rows(self) -> list[T]:
         """

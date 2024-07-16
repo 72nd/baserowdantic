@@ -299,28 +299,24 @@ class SingleSelectField(SelectEntry[SelectEnum], BaserowField):
         """
         This function can be used to directly obtain the correct instance of the
         field abstraction from an enum. Primarily, this function is a quality of
-        life feature and replaces a syntax that is somewhat unergonomic and
-        unintuitive. As shown in the example:
+        life feature for directly setting a field value in a model
+        initialization. This replaces the somewhat unergonomic and unintuitive
+        syntax which would be used otherwise.
 
-        ```python
-        class Genre(str, enum.Enum):
-            FICTION = "Fiction"
-            EDUCATION = "Education"
+        ```python class Genre(str, enum.Enum):
+            FICTION = "Fiction" EDUCATION = "Education"
 
         class Book(Table):
-            [...]
-            genre: Optional[SingleSelectField[Genre]] = Field(default=None)
+            [...] genre: Optional[SingleSelectField[Genre]] =
+            Field(default=None)
 
-        # Can use this...
-        await Book(
+        # Can use this... await Book(
             genre=SingleSelectField.from_enum(Genre.FICTION),
         ).create()
 
-        # ...instead of
-        await Book(
+        # ...instead of await Book(
             genre=SingleSelectField[Genre](value=Genre.FICTION)
-        ).create()
-        ```
+        ).create() ```
 
         Args:
             select_enum (SelectEnum): Enum to which the field should be set.add 

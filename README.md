@@ -25,11 +25,13 @@ The package can be used in two different ways:
 1. [Direct Editing with API Basic Client](#basic-client): You can directly edit with Baserow using the API Basic Client.
 2. [Executing Actions on a Pydantic Model](#orm-like-access-using-models): Actions can be executed on a pydantic model. In this case, the table structure only needs to be defined once, and the library uses this information for all actions such as creating tables, reading and writing entries, and more.
 
-## Demo / Introduction Example (TODO Title)
+## Walkthrough / Introductory Example
 
 Abstract introductions not your thing? This example offers a hands-on look at the ORM capabilities of baserowdantic. You can find a running version of this code at [example/basic_orm.py](example/basic_orm.py).
 
 The example models a simplified version of a library database. There is a table of authors and a table of books. The books table references the corresponding author's entry and can store the cover image.
+
+his introduction provides only a brief overview of the functions. For a more detailed description of all features, please refer to the sections below.
 
 ### Client
 
@@ -51,7 +53,7 @@ First, we need to define the structure of the two tables (authors and books) in 
 class Author(Table):
     # This class variable defines the ID of the table in Baserow. It can be
     # omitted if the table has not been created yet.
-    table_id = 1398
+    table_id = 23
     # Name of the Table in Baserow.
     table_name = "Author"
     # This model_config is necessary, otherwise it won't work.
@@ -64,16 +66,16 @@ class Author(Table):
     age: int = Field(alias=str("Age"))
 
 
-# Baserow has a single select field. This can be mapped to enums.
-
+# Select fields are represented as enums. Therefore we define one for the genres.
 class Genre(str, enum.Enum):
     FICTION = "Fiction"
     EDUCATION = "Education"
     MYSTERY = "Mystery"
 
 
+# The Book model demonstrates some more advanced field types.
 class Book(Table):
-    table_id = 1399
+    table_id = 42
     table_name = "Book"
     model_config = ConfigDict(populate_by_name=True)
 
@@ -95,13 +97,29 @@ class Book(Table):
     )
 ```
 
-### Create the tables
+### Create tables
 
-TODO.
+With the model defining the table structure, baserowdantic can create the tables based on it. This step requires authentication using login credentials (JWT Tokens, more info [here](#authentication)). The `table_id` ClassVar does not need to be set in the model when initially creating the table in Baserow. However, it must be set afterward to allow further modifications to the table.
 
-### Add some records
+The method requires the database ID where the table should be created. You can find this ID in the Baserow user interface.
 
-TODO.
+```python
+await Author.create_table(227)
+await Book.create_table(227)
+```
+
+### Creating Entries
+
+Now that the tables are set up in the database, you can start populating them with entries. The following example provides insights into the various methods available.
+
+```python
+# Let's start by creating a few authors.
+await Author(name="John Doe", age=23).create()
+await Author(name="Jane Smith", age=42).create()
+await Author(name="Anna Thompson", age=36).create()
+
+# 
+```
 
 ### Alter and delete some records
 
@@ -163,7 +181,7 @@ The [`Client`](https://alex-berlin-tv.github.io/baserowdantic/baserow/client.htm
 Access to the Baserow API requires authentication, and there are [two methods available](https://baserow.io/docs/apis/rest-api) for this:
 
 - **Database Tokens:** These tokens are designed for delivering data to frontends and, as such, can only perform CRUD (Create, Read, Update, Delete) operations on a database. New tokens can be created in the User Settings, where their permissions can also be configured. For instance, it is possible to create a token that only allows reading. These tokens have unlimited validity.
-- **JWT Tokens:** All other functionalities require a JWT token, which can be obtained by providing login credentials (email address and password) to the Baserow API. These tokens have a limited lifespan of 10 minutes.
+- **JWT Tokens:** All other functionalities require a JWT token, which can be obtained by providing login credentials (email address and password) to the Baserow API. These tokens have a limited lifespan of 10 minutes. Please note that baserowdantic currently is not able to refresh the token.
 
 The client in this package can handle both types of tokens. During initialization, you can provide either a Database Token or the email address and password of a user account. For most use cases, the Database Token is sufficient and recommended. The JWT Token is required only for creating new tables or fields within them. For long-running applications, the Database Token is essential since this package currently does not implement refreshing of JWT Tokens.
 

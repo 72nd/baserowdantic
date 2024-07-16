@@ -1,7 +1,5 @@
 <p align="right">
-  <picture>
-    <img src="misc/toc-indicator-dark.png" alt="Description of the image">
-  </picture>
+  <img src="misc/toc-indicator-dark.svg" alt="Description of the image">
 </p>
 <p align="center">
   <img src="misc/town.png" alt="AI-generated image of an old town with a prominent town sign reading ‘Baserow’ on it." height="200">

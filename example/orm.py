@@ -350,7 +350,7 @@ async def query(author_ids: list[int], book_ids: list[int]):
             print(f"Download the book cover: {file.url}")
 
 
-async def update(book_ids: list[int]):
+async def update(author_ids: list[int], book_ids: list[int]):
     book_id = book_ids[0]
 
     # Update by ID
@@ -383,7 +383,16 @@ async def update(book_ids: list[int]):
         book.keywords.remove(Keyword.MYSTERY, Keyword.FICTION)
     await book.update()
 
-    # Modify file field
+    # Modify link field.
+    if book.author is not None:
+        # Remove all current linked entries.
+        book.author.clear()
+        # Append author entry by row id and instance.
+        author = await Author.by_id(author_ids[0])
+        book.author.append(author_ids[1], author)
+        await book.update()
+
+    # Modify file field.
     if book.cover is not None:
         # Remove current file. And add two new ones.
         book.cover.clear()
@@ -402,8 +411,8 @@ async def run():
     # book_ids = await populate_books(author_ids)
     # await query(author_ids, book_ids)
     # await query([4], [5])  # TEST
-    # await update(book_ids)
-    await update([3])
+    # await update(author_ids, book_ids)
+    await update([5, 6], [3])
 
     # UPDATE ENTRY
     # TODO Text

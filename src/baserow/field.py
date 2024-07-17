@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Generic, Optional, TypeVar, Union
 from pydantic import BaseModel, ConfigDict, Field, RootModel, model_serializer, model_validator
 
 from baserow.client import GlobalClient
+from baserow.color import ColorSequence
 from baserow.error import PydanticGenericMetadataError
 from baserow.field_config import CreatedByFieldConfig, FieldConfigType, FileFieldConfig, LastModifiedByFieldConfig, MultipleCollaboratorsFieldConfig, MultipleSelectFieldConfig, SelectEntryConfig, SingleSelectFieldConfig
 from baserow.file import File
@@ -302,9 +303,14 @@ class SelectEntry(BaseModel, Generic[SelectEnum]):
     @classmethod
     def _options_config(cls) -> list[SelectEntryConfig]:
         rsl: list[SelectEntryConfig] = []
+        color_sequence = ColorSequence()
         i = 0
         for value in cls._get_all_possible_values():
-            rsl.append(SelectEntryConfig(id=i, value=value))
+            rsl.append(SelectEntryConfig(
+                id=i,
+                value=value,
+                color=color_sequence.get_color(),
+            ))
             i += 1
         return rsl
 

@@ -31,7 +31,7 @@ Abstract introductions not your thing? This example offers a hands-on look at th
 
 The example models a simplified version of a library database. There is a table of authors and a table of books. The books table references the corresponding author's entry and can store the cover image.
 
-his introduction provides only a brief overview of the functions. For a more detailed description of all features, please refer to the sections below.
+This introduction provides only a brief overview of the functions. For a more detailed description of all features, please refer to the sections below.
 
 ### Client
 
@@ -50,6 +50,13 @@ GlobalClient.configure(
 First, we need to define the structure of the two tables (authors and books) in a model. Please note the class variables `table_id` and `table_name`. These link the model to the corresponding table in Baserow.
 
 ```python
+from baserow.client import GlobalClient
+from baserow.field import FileField, SelectEntry, SingleSelectField
+from baserow.field_config import PrimaryField
+from baserow.table import Table, TableLinkField
+from pydantic import Field, ConfigDict
+from typing_extensions import Annotated
+
 class Author(Table):
     # This class variable defines the ID of the table in Baserow. It can be
     # omitted if the table has not been created yet.
@@ -142,18 +149,42 @@ Now that records are present in the table, you can start querying them. Besides 
 
 ```python
 # Getting the entry by its unique ID.
-await complete_jane = Author.by_id(jane.id)
+complete_jane_record = Author.by_id(jane.id)
+print(complete_jane_record)
 
-await Author.query(
-  filter=
-  order_by=
+# An example of a more complex query: All authors between the ages of 30 and 40,
+# sorted by age.
+filtered_authors = await Author.query(
+    filter=AndFilter().higher_than_or_equal("Age", "30").lower_than_or_equal("Age", "40"),
+    order_by=["Age"],
 )
+print(filtered_authors)
+```
+
+The results from Baserow are paginated (default is 100 per request, maximum can be set to 200 using the `size` parameter). If desired, the library can automatically handle querying larger tables through multiple requests by setting `size` to -1. Use this option with caution, as it can create server load for large tables.
+
+```python
+all_books = await Author.query(size=-1)
+print(f"All books: {all_books}")
+```
+
+```python
+# Linked records
+# Get file url(s)
 ```
 
 ### Alter and delete some records
 
 TODO.
 
+```python
+# Set and Update
+# Update directly with kwargs
+# Batch update
+
+await book.cover.append_file_from_url("https://picsum.photos/id/14/400/300")
+await book.update()
+```
 
 ## Note on the Examples Provided
 

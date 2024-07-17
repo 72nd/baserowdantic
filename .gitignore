@@ -1,6 +1,9 @@
 # Custom stuff
 test.py
 
+# Ignore example API credentials file.
+example/secrets.json
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

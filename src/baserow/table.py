@@ -8,7 +8,7 @@ from functools import wraps
 from typing import Any, ClassVar, Generic, Optional, Tuple, Type, TypeVar, Union, get_args, get_origin
 import uuid
 
-from pydantic import BaseModel, ConfigDict, Field, RootModel, model_serializer, model_validator
+from pydantic import UUID4, BaseModel, ConfigDict, Field, RootModel, model_serializer, model_validator
 from pydantic.fields import FieldInfo
 
 from baserow.client import Client, GlobalClient, MinimalRow
@@ -129,6 +129,10 @@ class TableLinkField(BaserowField, RootModel[list[RowLink]], Generic[T]):
             )
         linked_table = metadata["args"][0]
         return LinkFieldConfig(link_row_table_id=linked_table.table_id)
+
+    @classmethod
+    def read_only(cls) -> bool:
+        return False
 
     @classmethod
     def from_value(cls, instance: int | T | list[int | T]):
@@ -507,10 +511,23 @@ class Table(BaseModel, abc.ABC):
         """
         if self.row_id is None:
             raise RowIDNotSetError(self.__class__.__name__, "update")
+
+        excluded: list[str] = []
+        for key, field in self.__dict__.items():
+            if isinstance(field, BaserowField) and field.read_only():
+                excluded.append(key)
+            elif isinstance(field, uuid.UUID):
+                excluded.append(key)
+
         rsl = await self.__req_client().update_row(
             self.table_id,
             self.row_id,
-            self.model_dump(by_alias=True, mode="json", exclude_none=True),
+            self.model_dump(
+                by_alias=True,
+                mode="json",
+                exclude_none=True,
+                exclude=set(excluded),
+            ),
             True
         )
         for _, field in self.__dict__.items():

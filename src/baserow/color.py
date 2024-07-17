@@ -6,6 +6,26 @@ from typing import Self
 class Color(str, enum.Enum):
     """The colors defined and provided by Baserow."""
 
+    DARK_BLUE = "dark-blue"
+    """Hex: #acc8f8"""
+    DARK_GREEN = "dark-green"
+    """Hex: #a0eeba"""
+    DARK_CYAN = "dark-cyan"
+    """Hex: #70e0ef"""
+    DARK_YELLOW = "dark-yellow"
+    """Hex: #ffdd8f"""
+    DARK_ORANGE = "dark-orange"
+    """Hex: #ffe9b4"""
+    DARK_RED = "dark-red"
+    """Hex: #ffbdb4"""
+    DARK_BROWN = "dark-brown"
+    """Hex: #f5c098"""
+    DARK_PURPLE = "dark-purple"
+    """Hex: #cf96f2"""
+    DARK_PINK = "dark-pink"
+    """Hex: #f285d9"""
+    DARK_GRAY = "dark-gray"
+    """Hex: #b5b5b7"""
     LIGHT_BLUE = "light-blue"
     """Hex: #f0f4fc"""
     LIGHT_GREEN = "light-green"
@@ -46,26 +66,6 @@ class Color(str, enum.Enum):
     """Hex: #f7b2e7"""
     GRAY = "gray"
     """Hex: #d7d8d9"""
-    DARK_BLUE = "dark-blue"
-    """Hex: #acc8f8"""
-    DARK_GREEN = "dark-green"
-    """Hex: #a0eeba"""
-    DARK_CYAN = "dark-cyan"
-    """Hex: #70e0ef"""
-    DARK_YELLOW = "dark-yellow"
-    """Hex: #ffdd8f"""
-    DARK_ORANGE = "dark-orange"
-    """Hex: #ffe9b4"""
-    DARK_RED = "dark-red"
-    """Hex: #ffbdb4"""
-    DARK_BROWN = "dark-brown"
-    """Hex: #f5c098"""
-    DARK_PURPLE = "dark-purple"
-    """Hex: #cf96f2"""
-    DARK_PINK = "dark-pink"
-    """Hex: #f285d9"""
-    DARK_GRAY = "dark-gray"
-    """Hex: #b5b5b7"""
     DARKER_BLUE = "darker-blue"
     """Hex: #689ef1"""
     DARKER_GREEN = "darker-green"
@@ -118,7 +118,7 @@ class BasicColor(str, enum.Enum):
         return random.choice(list(cls))
 
 
-class ColorProvider:
+class ColorSequence:
     """
     This class provides the ability to obtain appealing color gradients. Using
     the method `ColorProvider.get_color()`, you can retrieve the colors

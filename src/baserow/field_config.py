@@ -5,24 +5,14 @@ classes cannot be used to parse/validate data coming from Baserow.
 
 
 import abc
-from collections import deque, namedtuple
-from datetime import date, datetime, time, timedelta
+from datetime import date, datetime, timedelta
 import enum
 import random
 
 from typing import Annotated, Any, Literal, Optional, Union
-from pydantic import UUID4, BaseModel, Field, IPvAnyAddress, RootModel
+from pydantic import UUID4, BaseModel, Field, RootModel
 
-
-def random_color() -> str:
-    """Returns a random color as a hex-string."""
-    min_delta = 30
-    red, green, blue = 0, 0, 0
-    while abs(red - green) < min_delta or abs(green-blue) < min_delta or abs(red-blue) < min_delta:
-        red = random.randint(0, 255)
-        green = random.randint(0, 255)
-        blue = random.randint(0, 255)
-    return f"#{red:02x}{green:02x}{blue:02x}"
+from baserow.color import BasicColor, Color
 
 
 class FieldConfigBase(BaseModel, abc.ABC):
@@ -114,7 +104,7 @@ class RatingFieldConfig(FieldConfigBase):
     type: Literal["rating"] = "rating"
     max_value: int = Field(default=5, ge=1, le=10)
     """Maximum value the rating can take."""
-    color: str = Field(default_factory=random_color)
+    color: BasicColor = Field(default=BasicColor.DARK_BLUE)
     """Color of the symbols."""
     style: RatingStyle = RatingStyle.STAR
     """Style of rating symbols."""
@@ -244,7 +234,7 @@ class SelectEntryConfig(BaseModel):
     """Config for a entry in a single or multiple select field."""
     id: int
     value: str = Field(max_length=255)
-    color: str = Field(max_length=255, default_factory=random_color)
+    color: Color = Field(max_length=255, default=Color.DARK_BLUE)
 
 
 class SingleSelectFieldConfig(FieldConfigBase):

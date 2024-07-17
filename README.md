@@ -196,16 +196,65 @@ for file in random_book.cover.root:
   print(f"Download the book cover: {file.url}")
 ```
 
-### Alter data
+### Update records
 
 TODO.
 
-```python
-# Set and Update
-# Update directly with kwargs
-# Batch update
+Three way to manipulate basic fields. Last one is recommended.
 
-await book.cover.append_file_from_url("https://picsum.photos/id/14/400/300")
+```python
+# Update by ID
+await Book.update_fields_by_id(book_id, title="Gardening Basics")
+print(f"Set title of book id={book_id} to 'Gardening Basics'")
+
+# Update model instance: Manipulate by field name
+book = await Book.by_id(book_id)
+await book.update_fields(description="A beginner's guide to gardening.")
+print(f"Set description of book id={book_id} to 'A beginner's guide to gardening.'")  # noqa
+
+# Update model instance: Update instance to Baserow
+book.published_date = datetime(2021, 3, 5)
+book.reading_duration = timedelta(hours=6)
+book.rating = 5
+await book.update()
+```
+
+Manipulate single and multiple select fields. Again: Don't forget to update.
+
+```python
+# Set a new value for the single select field.
+book.genre.set(Genre.EDUCATION)
+
+# Remove all current keywords.
+book.keywords.clear()
+# Add some new keywords.
+book.keywords.append(
+    Keyword.EDUCATION, Keyword.BEGINNER, Keyword.MYSTERY, Keyword.FICTION,
+)
+# Remove keyword(s).
+book.keywords.remove(Keyword.MYSTERY, Keyword.FICTION)
+await book.update()
+```
+
+Modify link fields. As multiple select fields.
+
+```python
+# Remove all current linked entries.
+book.author.clear()
+
+# Append author entry by row id and instance.
+author = await Author.by_id(author_ids[0])
+book.author.append(author_ids[1], author)
+await book.update()
+```
+
+Modify file fields works alike. As always: Don't forget to update.
+
+```python
+# Remove current file. And add two new ones.
+book.cover.clear()
+await book.cover.append_file(example_image())
+await book.cover.append_file_from_url("https://picsum.photos/180/320")
 await book.update()
 ```
 

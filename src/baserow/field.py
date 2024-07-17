@@ -70,7 +70,16 @@ class BaserowField(BaseModel, abc.ABC):
     def default_config(cls) -> FieldConfigType:
         """Returns the default field config for a given field type."""
 
+    @classmethod
+    @abc.abstractmethod
+    def read_only(cls) -> bool:
+        """
+        Read only fields (like modification date or UUID fields) will be ignored
+        during update calls like `Table.update()`.
+        """
+
     _pending_changes: list[str] = []
+    """See documentation of `BaserowField.register_pending_changes()`."""
 
     def register_pending_change(self, description: str):
         """
@@ -115,6 +124,10 @@ class CreatedByField(User, BaserowField):
     def default_config(cls) -> FieldConfigType:
         return CreatedByFieldConfig()
 
+    @classmethod
+    def read_only(cls) -> bool:
+        return True
+
 
 class LastModifiedByField(User, BaserowField):
     """
@@ -123,6 +136,10 @@ class LastModifiedByField(User, BaserowField):
     @classmethod
     def default_config(cls) -> FieldConfigType:
         return LastModifiedByFieldConfig()
+
+    @classmethod
+    def read_only(cls) -> bool:
+        return True
 
 
 class CreatedOnField(BaserowField, RootModel[datetime.datetime]):
@@ -135,6 +152,10 @@ class CreatedOnField(BaserowField, RootModel[datetime.datetime]):
     def default_config(cls) -> FieldConfigType:
         return CreatedOnFieldConfig()
 
+    @classmethod
+    def read_only(cls) -> bool:
+        return True
+
 
 class LastModifiedOnField(BaserowField, RootModel[datetime.datetime]):
     """
@@ -145,6 +166,10 @@ class LastModifiedOnField(BaserowField, RootModel[datetime.datetime]):
     @classmethod
     def default_config(cls) -> FieldConfigType:
         return LastModifiedFieldConfig()
+
+    @classmethod
+    def read_only(cls) -> bool:
+        return True
 
 
 class MultipleCollaboratorsField(BaserowField, RootModel[list[User]]):
@@ -157,6 +182,10 @@ class MultipleCollaboratorsField(BaserowField, RootModel[list[User]]):
     def default_config(cls) -> FieldConfigType:
         return MultipleCollaboratorsFieldConfig()
 
+    @classmethod
+    def read_only(cls) -> bool:
+        return False
+
 
 class FileField(BaserowField, RootModel[list[File]]):
     """
@@ -168,6 +197,10 @@ class FileField(BaserowField, RootModel[list[File]]):
     @classmethod
     def default_config(cls) -> FieldConfigType:
         return FileFieldConfig()
+
+    @classmethod
+    def read_only(cls) -> bool:
+        return False
 
     @classmethod
     async def from_file(
@@ -267,7 +300,8 @@ class FileField(BaserowField, RootModel[list[File]]):
         self.root.append(new_file)
         if register_pending_change:
             self.register_pending_change(
-                f"file '{new_file.original_name}' added")
+                f"file '{new_file.original_name}' added",
+            )
 
     async def append_file_from_url(
         self,
@@ -315,7 +349,7 @@ class FileField(BaserowField, RootModel[list[File]]):
         Removes all files from field. After that, `Table.update()` must be called
         to apply the changes.
         """
-        self = FileField(root=[])
+        self.root.clear()
         self.register_pending_change("remove all files in field")
 
 
@@ -399,6 +433,10 @@ class SingleSelectField(SelectEntry[SelectEnum], BaserowField):
         return SingleSelectFieldConfig(select_options=options)
 
     @classmethod
+    def read_only(cls) -> bool:
+        return False
+
+    @classmethod
     def from_enum(cls, select_enum: SelectEnum):
         """
         This function can be used to directly obtain the correct instance of the
@@ -451,6 +489,10 @@ class MultipleSelectField(BaserowField, RootModel[list[SelectEntry]], Generic[Se
     root: list[SelectEntry[SelectEnum]]
 
     @classmethod
+    def read_only(cls) -> bool:
+        return False
+
+    @classmethod
     def from_enums(cls, *select_enums: SelectEnum):
         """
         This function can be used to directly obtain the correct instance of the
@@ -475,8 +517,8 @@ class MultipleSelectField(BaserowField, RootModel[list[SelectEntry]], Generic[Se
         ```
 
         Args:
-            *select_enum (SelectEnum | list[SelectEnum]): Enum(s) to which the
-                field should be set.add 
+            *select_enum (SelectEnum | list[SelectEnum]): Enum(s) value(s) to be part
+                of the select field.
         """
         if not select_enums:
             raise ValueError("At least one enum must be provided")
@@ -485,6 +527,56 @@ class MultipleSelectField(BaserowField, RootModel[list[SelectEntry]], Generic[Se
         for enum in select_enums:
             enums.append(SelectEntry[type(enum)](value=enum))
         return MultipleSelectField[select_enum_type](root=enums)
+
+    def append(self, *select_enums: SelectEnum):
+        """
+        Append one or multiple enum(s) to the field. Please note that this
+        method does not update the record on Baserow. You have to call
+        `Table.update()` afterwards.
+
+        Args:
+            *select_enum (SelectEnum | list[SelectEnum]): Enum(s) value(s) to be
+                added the the select field.
+        """
+        names: list[str] = []
+        for enum in select_enums:
+            self.root.append(SelectEntry(value=enum))
+            names.append(enum.name)
+        self.register_pending_change(
+            f"append enum(s) {", ".join(names)} to multiple select field",
+        )
+
+    def clear(self):
+        """
+        Remove all enums currently set for this field. Please note that this
+        method does not update the record on Baserow. You have to call
+        `Table.update()` afterwards.
+        """
+        self.root.clear()
+        self.register_pending_change(
+            f"removed all enum(s) from multiple select field",
+        )
+
+    def remove(self, *select_enums: SelectEnum):
+        """
+        Remove one or multiple enum(s) from the field. Please note that this
+        method does not update the record on Baserow. You have to call
+        `Table.update()` afterwards.
+
+        Args:
+            *select_enum (SelectEnum | list[SelectEnum]): Enum(s) value(s) to be
+                removed the the select field.
+        """
+        to_be_removed = [
+            entry for entry in self.root if entry. value in select_enums]
+        self.root = [
+            entry for entry in self.root if entry not in to_be_removed
+        ]
+        names = [
+            entry.value.name for entry in to_be_removed if entry.value is not None]
+        self.register_pending_change(
+            f"removed enum(s) {", ".join(names)} from multiple select field",
+        )
 
     @classmethod
     def default_config(cls) -> FieldConfigType:

@@ -501,8 +501,13 @@ class MultipleSelectField(BaserowField, RootModel[list[SelectEntry]], Generic[Se
             )
         select_enum = metadata["args"][0]
         rsl: list[SelectEntryConfig] = []
+        color_sequence = ColorSequence()
         i = 0
         for item in select_enum:
-            rsl.append(SelectEntryConfig(id=i, value=item.value))
+            rsl.append(SelectEntryConfig(
+                id=i,
+                value=item.value,
+                color=color_sequence.get_color(),
+            ))
             i += 1
         return MultipleSelectFieldConfig(select_options=rsl)

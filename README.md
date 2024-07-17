@@ -6,6 +6,8 @@
 </p>
 <p align="center">
   <img src="misc/logo.svg" alt="" width="350">
+  <a href="https://alex-berlin-tv.github.io/baserowdantic/baserow.html">📙 Documentation</a> – 
+  <a href="https://github.com/alex-berlin-tv/baserowdantic/blob/main/example/orm.py">🚀 Comprehensive example</a>
 </p>
 
 # baserowdantic
@@ -27,9 +29,9 @@ The package can be used in two different ways:
 
 ## Walkthrough / Introductory Example
 
-Abstract introductions not your thing? This example offers a hands-on look at the ORM capabilities of baserowdantic. You can find a running version of this code at [example/basic_orm.py](example/basic_orm.py).
+This sections offers a hands-on look at the ORM capabilities of baserowdantic. You can find a running version of this code at [example/orm.py](example/basic_orm.py).
 
-The example models a simplified version of a library database. There is a table of authors and a table of books. The books table references the corresponding author's entry and can store the cover image.
+**Not in the mood for lengthy explanations?** Then check out the [examples/orm.py]() example directly. It demonstrates how to work with all the implemented field types.
 
 This introduction provides only a brief overview of the functions. For a more detailed description of all features, please refer to the sections below.
 

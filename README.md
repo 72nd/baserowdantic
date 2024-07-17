@@ -5,7 +5,7 @@
 </picture>
 </p>
 <p align="center">
-  <img src="misc/logo.svg" alt="" width="350">
+  <img src="misc/logo.svg" alt="" width="350"><br>
   <a href="https://alex-berlin-tv.github.io/baserowdantic/baserow.html">📙 Documentation</a> – 
   <a href="https://github.com/alex-berlin-tv/baserowdantic/blob/main/example/orm.py">🚀 Comprehensive example</a>
 </p>

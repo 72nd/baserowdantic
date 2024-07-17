@@ -1,0 +1,79 @@
+Filter,Example value,Full example
+equal,string,field is 'string'
+not_equal,string,field is not 'string'
+date_is,UTC??today,field is 'UTC??today'
+date_is_not,UTC??today,field is not 'UTC??today'
+date_is_before,UTC??today,field is before 'UTC??today'
+date_is_on_or_before,UTC??today,field is on or before 'UTC??today'
+date_is_after,UTC??today,field is after 'UTC??today'
+date_is_on_or_after,UTC??today,field is on or after 'UTC??today'
+date_is_within,UTC??today,field is within 'UTC??today'
+"date_equal
+deprecated",2020-01-01,field is date '2020-01-01'
+"date_not_equal
+deprecated",2020-01-01,field is not date '2020-01-01'
+"date_equals_today
+deprecated",UTC,field is today 'UTC'
+"date_before_today
+deprecated",UTC,field is before today 'UTC'
+"date_after_today
+deprecated",UTC,field is after today 'UTC'
+"date_within_days
+deprecated",Europe/Berlin?1,field is within days 'Europe/Berlin?1'
+"date_within_weeks
+deprecated",Europe/Berlin?1,field is within weeks 'Europe/Berlin?1'
+"date_within_months
+deprecated",Europe/Berlin?1,field is within months 'Europe/Berlin?1'
+"date_equals_days_ago
+deprecated",Europe/Berlin?1,field is days ago 'Europe/Berlin?1'
+"date_equals_months_ago
+deprecated",Europe/Berlin?1,field is months ago 'Europe/Berlin?1'
+"date_equals_years_ago
+deprecated",Europe/Berlin?1,field is years ago 'Europe/Berlin?1'
+"date_equals_week
+deprecated",UTC,field in this week 'UTC'
+"date_equals_month
+deprecated",UTC,field in this month 'UTC'
+"date_equals_year
+deprecated",UTC,field in this year 'UTC'
+date_equals_day_of_month,1,field day of month is '1'
+"date_before
+deprecated",2020-01-01,field is before date '2020-01-01'
+"date_before_or_equal
+deprecated",2020-01-01,field is before or same date '2020-01-01'
+"date_after
+deprecated",2020-01-01,field is after date '2020-01-01'
+"date_after_or_equal
+deprecated",2020-01-01,field is after or same date '2020-01-01'
+"date_after_days_ago
+deprecated",20,field is after days ago '20'
+contains,string,field contains 'string'
+contains_not,string,field doesn't contain 'string'
+contains_word,string,field contains word 'string'
+doesnt_contain_word,string,field doesn't contain word 'string'
+filename_contains,string,field filename contains 'string'
+has_file_type,image | document,field has file type 'image | document'
+files_lower_than,2,field files lower than '2'
+length_is_lower_than,5,field length is lower than '5'
+higher_than,100,field higher than '100'
+higher_than_or_equal,100,field higher than or equal '100'
+lower_than,100,field lower than '100'
+lower_than_or_equal,100,field lower than or equal '100'
+is_even_and_whole,TRUE,field is even and whole 'true'
+single_select_equal,1,field is '1'
+single_select_not_equal,1,field is not '1'
+single_select_is_any_of,"1,2","field is any of '1,2'"
+single_select_is_none_of,"1,2","field is none of '1,2'"
+boolean,TRUE,field is 'true'
+link_row_has,1,field has '1'
+link_row_has_not,1,field doesn't have '1'
+link_row_contains,string,field contains 'string'
+link_row_not_contains,string,field doesn't contain 'string'
+multiple_select_has,1,field has '1'
+multiple_select_has_not,1,field doesn't have '1'
+multiple_collaborators_has,1,field has '1'
+multiple_collaborators_has_not,1,field doesn't have '1'
+empty,,field is empty
+not_empty,,field is not empty
+user_is,1,field is '1'
+user_is_not,1,field is not '1'

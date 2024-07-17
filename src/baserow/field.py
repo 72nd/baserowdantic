@@ -331,21 +331,25 @@ class SingleSelectField(SelectEntry[SelectEnum], BaserowField):
         initialization. This replaces the somewhat unergonomic and unintuitive
         syntax which would be used otherwise.
 
-        ```python class Genre(str, enum.Enum):
-            FICTION = "Fiction" EDUCATION = "Education"
+        ```python
+        class Genre(str, enum.Enum):
+            FICTION = "Fiction"
+            EDUCATION = "Education"
 
         class Book(Table):
-            [...] genre: Optional[SingleSelectField[Genre]] =
-            Field(default=None)
+            [...]
+            genre: Optional[SingleSelectField[Genre]] = Field(default=None)
 
-        # Can use this... await Book(
+        # Can use this...
+        await Book(
             genre=SingleSelectField.from_enum(Genre.FICTION),
         ).create()
 
         # ...instead of
         await Book(
             genre=SingleSelectField[Genre](value=Genre.FICTION)
-        ).create() ```
+        ).create()
+        ```
 
         Args:
             select_enum (SelectEnum): Enum to which the field should be set.add 
@@ -369,6 +373,42 @@ class SingleSelectField(SelectEntry[SelectEnum], BaserowField):
 class MultipleSelectField(BaserowField, RootModel[list[SelectEntry]], Generic[SelectEnum]):
     """Multiple select field in a table."""
     root: list[SelectEntry[SelectEnum]]
+
+    @classmethod
+    def from_enums(cls, *select_enums: SelectEnum):
+        """
+        This function can be used to directly obtain the correct instance of the
+        field abstraction from one or multiple enum(s). Primarily, this function
+        is a quality of life feature for directly setting a field value in a
+        model initialization. This replaces the somewhat unergonomic and
+        unintuitive syntax which would be used otherwise.
+
+        ```python
+        class Keyword(str, enum.Enum):
+            ADVENTURE = "Adventure"
+            FICTION = "Fiction"
+            TECH = "Text"
+
+        class Book(Table):
+            [...]
+            keywords: Optional[MultipleSelectField[Keyword]] = Field(default=None)
+
+        await Book(
+            keywords=MultipleSelectField.from_enums(Keyword.ADVENTURE, Keyword.FICTION)
+        ).create()
+        ```
+
+        Args:
+            *select_enum (SelectEnum | list[SelectEnum]): Enum(s) to which the
+                field should be set.add 
+        """
+        if not select_enums:
+            raise ValueError("At least one enum must be provided")
+        select_enum_type = type(select_enums[0])
+        enums: list[SelectEntry[SelectEnum]] = []
+        for enum in select_enums:
+            enums.append(SelectEntry[type(enum)](value=enum))
+        return MultipleSelectField[select_enum_type](root=enums)
 
     @classmethod
     def default_config(cls) -> FieldConfigType:

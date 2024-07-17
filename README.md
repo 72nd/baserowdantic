@@ -47,7 +47,7 @@ GlobalClient.configure(
 
 ### Defining the Models
 
-First, we need to define the structure of the two tables (authors and books) in a model. Please note the class variables table_id and table_name. These link the model to the corresponding table in Baserow.
+First, we need to define the structure of the two tables (authors and books) in a model. Please note the class variables `table_id` and `table_name`. These link the model to the corresponding table in Baserow.
 
 ```python
 class Author(Table):
@@ -108,17 +108,46 @@ await Author.create_table(227)
 await Book.create_table(227)
 ```
 
-### Creating Entries
+### Creating entries
 
 Now that the tables are set up in the database, you can start populating them with entries. The following example provides insights into the various methods available.
 
 ```python
 # Let's start by creating a few authors.
-await Author(name="John Doe", age=23).create()
-await Author(name="Jane Smith", age=42).create()
-await Author(name="Anna Thompson", age=36).create()
+john = await Author(name="John Doe", age=23).create()
+jane = await Author(name="Jane Smith", age=42).create()
+anna = await Author(name="Anna Thompson", age=36).create()
 
-# 
+# Let's continue with the books. Note how we link the newly created authors to
+# the books and also add covers from both a local file and a URL.
+first_book = await Book(
+  title="The Great Adventure",
+  genre=SingleSelectField.from_enum(Genre.FICTION),
+  author=TableLinkField[Author].from_value(john.id),
+  cover=await FileField.from_file(open("path/to/cover.png", "rb")),
+)
+second_book = await Book(
+  title="Mystery of the Night",
+  genre=SingleSelectField.from_enum(Genre.MYSTERY),
+  author=TableLinkField[Author].from_value(jane.id),
+  cover=await FileField.from_url("https://picsum.photos/id/14/400/300")
+)
+```
+
+Please note that `Table.create()` only returns a `MinimalRow`, which contains only the entry's `id`. The complete dataset must be retrieved using a `Table.by_id()` query.
+
+### Querying Data
+
+Now that records are present in the table, you can start querying them. Besides a simple query by unique ID using [`Table.by_id()`](), you can also formulate complex query filters. Additionally, you can set the sorting, result page size, and the number of results. If you want to fetch all entries, you can set the `size` parameter to `-1`.
+
+```python
+# Getting the entry by its unique ID.
+await complete_jane = Author.by_id(jane.id)
+
+await Author.query(
+  filter=
+  order_by=
+)
 ```
 
 ### Alter and delete some records
@@ -413,7 +442,7 @@ print(rsl)
 
 ### Create, Update and Delete Table Fields
 
-"The Client class supports the [creation](https://alex-berlin-tv.github.io/baserowdantic/baserow/client.html#Client.create_database_table_field), [updating](https://alex-berlin-tv.github.io/baserowdantic/baserow/client.html#Client.update_database_table_field), and [deletion](https://alex-berlin-tv.github.io/baserowdantic/baserow/client.html#Client.delete_database_table_field) of table fields (referred to as 'Rows')."
+The Client class supports the [creation](https://alex-berlin-tv.github.io/baserowdantic/baserow/client.html#Client.create_database_table_field), [updating](https://alex-berlin-tv.github.io/baserowdantic/baserow/client.html#Client.update_database_table_field), and [deletion](https://alex-berlin-tv.github.io/baserowdantic/baserow/client.html#Client.delete_database_table_field) of table fields (referred to as 'Rows').
 
 For both creating and updating a field, the appropriate instance of [`FieldConfigType`](https://alex-berlin-tv.github.io/baserowdantic/baserow/field_config.html#FieldConfigType) is provided. For each field type in Baserow, there is a corresponding field config class that supports the specific settings of the field.
 

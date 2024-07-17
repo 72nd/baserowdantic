@@ -5,6 +5,7 @@ directly translate into built-in types.
 
 from __future__ import annotations
 import abc
+import datetime
 import enum
 from io import BufferedReader
 from typing import TYPE_CHECKING, Generic, Optional, TypeVar, Union
@@ -14,7 +15,7 @@ from pydantic import BaseModel, ConfigDict, Field, RootModel, model_serializer, 
 from baserow.client import GlobalClient
 from baserow.color import ColorSequence
 from baserow.error import PydanticGenericMetadataError
-from baserow.field_config import CreatedByFieldConfig, FieldConfigType, FileFieldConfig, LastModifiedByFieldConfig, MultipleCollaboratorsFieldConfig, MultipleSelectFieldConfig, SelectEntryConfig, SingleSelectFieldConfig
+from baserow.field_config import CreatedByFieldConfig, CreatedOnFieldConfig, FieldConfigType, FileFieldConfig, LastModifiedByFieldConfig, LastModifiedFieldConfig, MultipleCollaboratorsFieldConfig, MultipleSelectFieldConfig, SelectEntryConfig, SingleSelectFieldConfig
 from baserow.file import File
 
 if TYPE_CHECKING:
@@ -105,16 +106,32 @@ class User(BaseModel):
     name: Optional[str] = Field(alias=str("name"))
 
 
+class CreatedByField(User, BaserowField):
+    @classmethod
+    def default_config(cls) -> FieldConfigType:
+        return CreatedByFieldConfig()
+
+
 class LastModifiedByField(User, BaserowField):
     @classmethod
     def default_config(cls) -> FieldConfigType:
         return LastModifiedByFieldConfig()
 
 
-class CreatedByField(User, BaserowField):
+class CreatedOnField(BaserowField, RootModel[datetime.datetime]):
+    root: datetime.datetime
+
     @classmethod
     def default_config(cls) -> FieldConfigType:
-        return CreatedByFieldConfig()
+        return CreatedOnFieldConfig()
+
+
+class LastModifiedOnField(BaserowField, RootModel[datetime.datetime]):
+    root: datetime.datetime
+
+    @classmethod
+    def default_config(cls) -> FieldConfigType:
+        return LastModifiedFieldConfig()
 
 
 class MultipleCollaboratorsField(BaserowField, RootModel[list[User]]):

@@ -29,9 +29,9 @@ The package can be used in two different ways:
 
 ## Walkthrough / Introductory Example
 
-This sections offers a hands-on look at the ORM capabilities of baserowdantic. You can find a running version of this code at [example/orm.py](example/basic_orm.py).
+This sections offers a hands-on look at the ORM capabilities of baserowdantic. You can find a running version of this code at [example/orm.py](https://github.com/alex-berlin-tv/baserowdantic/blob/main/example/orm.py).
 
-**Not in the mood for lengthy explanations?** Then check out the [examples/orm.py]() example directly. It demonstrates how to work with all the implemented field types.
+**Not in the mood for lengthy explanations?** Then check out the [examples/orm.py](/blob/main/example/orm.py) example directly. It demonstrates how to work with all the implemented field types.
 
 This introduction provides only a brief overview of the functions. For a more detailed description of all features, please refer to the sections below.
 

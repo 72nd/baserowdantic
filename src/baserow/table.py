@@ -188,7 +188,7 @@ class TableLinkField(BaserowField, RootModel[list[RowLink]], Generic[T]):
         """Returns a list of all ID's as string for debugging."""
         return ",".join([str(link.row_id) for link in self.root])
 
-    def append(self, instance: int | T | list[int | T]):
+    def append(self, *instances: int | T):
         """
         Add a link to the given table row(s). Please note that this method does
         not update the record on Baserow. You have to call `Table.update()`
@@ -199,12 +199,7 @@ class TableLinkField(BaserowField, RootModel[list[RowLink]], Generic[T]):
                 added. When using a `Table` instance make sure that
                 `Table.row_id` is set.
         """
-        items: list[int | T] = []
-        if not isinstance(instance, list):
-            items = [instance]
-        else:
-            items = instance
-        for item in items:
+        for item in instances:
             if isinstance(item, int):
                 row_id = item
             elif item.row_id is None:
@@ -225,7 +220,7 @@ class TableLinkField(BaserowField, RootModel[list[RowLink]], Generic[T]):
         Deletes all linked entries. After that, `Table.update()` must be called
         to apply the changes.
         """
-        self = self.from_value([])
+        self.root.clear()
         self.register_pending_change("all links removed")
 
     async def query_linked_rows(self) -> list[T]:

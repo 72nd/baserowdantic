@@ -235,6 +235,20 @@ table_id = 23
 total_count = await client.table_row_count(table_id)
 ```
 
+### Add a client to a Table
+
+If a specific client is required for a table, it can be added as follows.
+
+```python
+client = Client("baserow.example.com", token="<API-TOKEN>")
+
+class Author(Table):
+  table_id = 23
+  table_name = "Author"
+  model_config = ConfigDict(populate_by_name=True)
+  client = client
+```
+
 ### Singleton/Global Client
 
 In many applications, maintaining a consistent connection to a single Baserow instance throughout the runtime is crucial. To facilitate this, the package provides a [Global Client](https://alex-berlin-tv.github.io/baserowdantic/baserow/client.html#GlobalClient), which acts as a singleton. This means the client needs to be configured just once using GlobalClient.configure(). After this initial setup, the Global Client can be universally accessed and used throughout the program.

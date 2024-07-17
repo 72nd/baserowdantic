@@ -291,7 +291,7 @@ async def query(author_ids: list[int], book_ids: list[int]):
     random_author = await Author.by_id(random.choice(author_ids))
     print(f"Author entry with id={random_author.row_id}: {random_author}")
 
-    random_book = await Author.by_id(random.choice(book_ids))
+    random_book = await Book.by_id(random.choice(book_ids))
     print(f"Book entry with id={random_book.row_id}: {random_book}")
 
     # All authors between the ages of 30 and 40, sorted by age.
@@ -309,13 +309,31 @@ async def query(author_ids: list[int], book_ids: list[int]):
     all_books = await Author.query(size=-1)
     print(f"All books: {all_books}")
 
+    # For linked entries, initially only the key value and the row_id of the
+    # linked records are available. Using `TableLinkField.query_linked_rows()`,
+    # the complete entries of all linked records can be retrieved.
+    if random_book.author is not None:
+        authors = await random_book.author.query_linked_rows()
+        print(f"Author(s) of book {random_book.title}: {authors}")
+
+    # Because the query has already been performed once, the cached result is
+    # immediately available.
+    if random_book.author is not None:
+        print(await random_book.author.cached_query_linked_rows())
+
+    # To access stored files, you can use the download URL. Please note that for
+    # security reasons, this link has a limited validity.
+    if random_book.cover is not None:
+        for file in random_book.cover.root:
+            print(f"Download the book cover: {file.url}")
+
 
 async def run():
     config_client()
-    await create_tables()
-    author_ids = await populate_authors()
-    book_ids = await populate_books(author_ids)
-    await query(author_ids, book_ids)
+    # await create_tables()
+    # author_ids = await populate_authors()
+    # book_ids = await populate_books(author_ids)
+    # await query(author_ids, book_ids)
     await query([4], [5])  # TEST
 
     # UPDATE ENTRY

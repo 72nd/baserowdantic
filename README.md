@@ -33,11 +33,13 @@ The package can be used in two different ways:
 
 This sections offers a hands-on look at the ORM capabilities of baserowdantic. You can find a running version of this code at [example/orm.py](https://github.com/alex-berlin-tv/baserowdantic/blob/main/example/orm.py).
 
-**Not in the mood for lengthy explanations?** Then check out the [examples/orm.py](/blob/main/example/orm.py) example directly. It demonstrates how to work with all the implemented field types.
+**Not in the mood for lengthy explanations?** Then check out the [examples/orm.py](https://github.com/alex-berlin-tv/baserowdantic/blob/main/example/orm.py) example directly. It demonstrates how to work with all the implemented field types.
 
 This introduction provides only a brief overview of the functions. For a more detailed description of all features, please refer to the sections below.
 
 ### Client
+
+For more information please refer to [the documentation below](#obtaining-a-client).
 
 The connection to Baserow is managed through a client object. For this simple example, we will define a global client singleton which is used by default in all methods. Authentication is possible with a token or with login credentials. Creating tables requires login with credentials.
 
@@ -172,9 +174,23 @@ all_books = await Author.query(size=-1)
 print(f"All books: {all_books}")
 ```
 
+Let's now take a look at Linked Fields. For linked entries, initially only the key value and the row_id of the linked records are available. Using `TableLinkField.query_linked_rows()`, the complete entries of all linked records can be retrieved. When dealing with complex database structures where many rows have multiple linked entries, this can lead to significant wait times due to repeated queries. To address this, there is an option to cache the results. If `TableLinkField.cached_query_linked_rows()` is used, the dataset is queried only the first time.
+
 ```python
-# Linked records
-# Get file url(s)
+book = Book.by_id(BOOK_ID)
+authors = await book.author.query_linked_rows()
+print(f"Author(s) of book {book.title}: {authors}")
+
+# Because the query has already been performed once, the cached result is
+# immediately available.
+print(await book.author.cached_query_linked_rows())
+```
+
+To access stored files, you can use the download URL. Please note that for security reasons, this link has a limited validity.
+
+```python
+for file in random_book.cover.root:
+  print(f"Download the book cover: {file.url}")
 ```
 
 ### Alter and delete some records
@@ -450,6 +466,8 @@ client.create_database_field(
 
 
 ## ORM-like access using models
+
+**Note: This part of the documentation needs to be revised and no longer completely reflects the current state. We'll probably move this into the API documentation. Please refer to [the walkthrough](#walkthrough--introductory-example) and the [comprehensive ORM example](https://github.com/alex-berlin-tv/baserowdantic/blob/main/example/orm.py) for up-to-date information.**
 
 The main motivation behind baserowdantic is to handle »everyday« CRUD (Create, Read, Update, Delete) interactions with Baserow through a model derived from pydantic's BaseModel called [`Table`](https://alex-berlin-tv.github.io/baserowdantic/baserow/table.html#Table). This Table model defines the structure and layout of a table in Baserow at a single location, thereby enabling validation of both input and output.
 

@@ -231,6 +231,7 @@ class TableLinkField(BaserowField, RootModel[list[RowLink]], Generic[T]):
         rsl: list[T] = []
         for link in self.root:
             rsl.append(await link.query_linked_row())
+        self._cache = rsl
         return rsl
 
     async def cached_query_linked_rows(self) -> list[T]:

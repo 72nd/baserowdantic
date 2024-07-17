@@ -8,6 +8,7 @@ import abc
 import datetime
 import enum
 from io import BufferedReader
+from pathlib import Path
 from typing import TYPE_CHECKING, Generic, Optional, TypeVar, Union
 
 from pydantic import BaseModel, ConfigDict, Field, RootModel, model_serializer, model_validator
@@ -102,23 +103,32 @@ class User(BaseModel):
     """
     A table field that contains one Baserow system user.
     """
-    user_id: Optional[int] = Field(alias=str("id"))
-    name: Optional[str] = Field(alias=str("name"))
+    user_id: int | None = Field(alias=str("id"))
+    name: str | None = Field(alias=str("name"))
 
 
 class CreatedByField(User, BaserowField):
+    """
+    Field tracking the user who created an entry.
+    """
     @classmethod
     def default_config(cls) -> FieldConfigType:
         return CreatedByFieldConfig()
 
 
 class LastModifiedByField(User, BaserowField):
+    """
+    Field tracking the user who last modified a record.
+    """
     @classmethod
     def default_config(cls) -> FieldConfigType:
         return LastModifiedByFieldConfig()
 
 
 class CreatedOnField(BaserowField, RootModel[datetime.datetime]):
+    """
+    Field containing the creation timestamp of a row.
+    """
     root: datetime.datetime
 
     @classmethod
@@ -127,6 +137,9 @@ class CreatedOnField(BaserowField, RootModel[datetime.datetime]):
 
 
 class LastModifiedOnField(BaserowField, RootModel[datetime.datetime]):
+    """
+    Field containing the last modification timestamp of a row.
+    """
     root: datetime.datetime
 
     @classmethod
@@ -159,12 +172,27 @@ class FileField(BaserowField, RootModel[list[File]]):
     @classmethod
     async def from_file(
         cls,
-        file: BufferedReader,
-        name: Optional[str] = None,
+        file: BufferedReader | str | Path,
+        name: str | None = None,
         client: Client | None = None,
     ):
         """
-        TODO.
+        This method takes a local file (either as a `BufferedReader` or as a
+        path) and uploads it to Baserow's media storage, handling the linkage
+        between the field and the stored file. A `FileField` instance containing
+        the uploaded file is returned. Calling this method initiates the file
+        upload, which may take some time depending on the file size.
+
+        Note that this method does not use the client associated with the table.
+
+        Args:
+            file (BufferedReader | str | Path): File to be uploaded.
+            name (str | None): Optional human-readable name of the file, as it
+                should be displayed in the Baserow frontend.
+            client (Client | None): Specifies which API client should be used.
+                If none is provided, the `GlobalClient` will be used. Note that
+                this method does not automatically use the client associated
+                with the table.
         """
         rsl = cls(root=[])
         await rsl.append_file(file, name, client, register_pending_change=False)
@@ -174,11 +202,24 @@ class FileField(BaserowField, RootModel[list[File]]):
     async def from_url(
         cls,
         url: str,
-        name: Optional[str] = None,
+        name: str | None = None,
         client: Client | None = None,
     ):
         """
-        TODO.
+        This method takes the URL of a publicly accessible file on the internet
+        and uploads it to Baserow's media storage, managing the linkage between
+        the field and the stored file. Calling this method initiates the file
+        upload, which may take some time depending on the file size.
+        Note that this method does not use the client associated with the table.
+
+        Args:
+            url (str): URL of the file to be uploaded.
+            name (str | None): Optional human-readable name of the file, as it
+                should be displayed in the Baserow frontend.
+            client (Client | None): Specifies which API client should be used.
+                If none is provided, the `GlobalClient` will be used. Note that
+                this method does not automatically use the client associated
+                with the table.
         """
         rsl = cls(root=[])
         await rsl.append_file_from_url(url, name, client, register_pending_change=False)
@@ -186,28 +227,38 @@ class FileField(BaserowField, RootModel[list[File]]):
 
     async def append_file(
         self,
-        file: BufferedReader,
-        name: Optional[str] = None,
+        file: BufferedReader | str | Path,
+        name: str | None = None,
         client: Client | None = None,
         register_pending_change: bool = True,
     ):
         """
-        TODO: HAS TO BE REWRITTEN!
-        Client/GlobalClient. Table.update() has to be called.
+        This method takes a local file (either as a `BufferedReader` or as a
+        path) and uploads it to Baserow's media storage and adds it to the file
+        field.Calling this method initiates the file upload, which may take some
+        time depending on the file size.
 
-        Uploads a new file to Baserow and adds it to the local field instance.
-        Afterwards, this instance can be used with `Client.update_row()` to update
-        the file field in a row. Further information about uploading and setting
-        files can be found in the documentation of `client.upload_file()`.
+        Further information about uploading and setting files can be found in
+        the documentation of `client.upload_file()`. After this method
+        `Table.update()` must be called manually to apply the changes.
 
         Args:
-            client (Client): Instance of a Baserow client to upload the file.
-            file (BufferedReader): A BufferedReader containing the file to be
-                uploaded.
-            name (str, optional): Optional file name, which will be displayed in
-                the Baserow user interface. This name is also used when a file
-                is downloaded from Baserow.
+            file (BufferedReader | str | Path): File to be uploaded.
+            name (str | None): Optional human-readable name of the file, as it
+                should be displayed in the Baserow frontend.
+            client (Client | None): Specifies which API client should be used.
+                If none is provided, the `GlobalClient` will be used. Note that
+                this method does not automatically use the client associated
+                with the table.
+            register_pending_change (bool): Internal option for the
+                `FileField.from_file()` and `FileField.from_url()` methods. When
+                set to false, tracking of pending changes for this call is
+                disabled. This is only useful in situations where
+                `Table.update()` will be called anyway, such as when the method
+                is invoked within the initialization of a model.
         """
+        if not isinstance(file, BufferedReader):
+            file = open(file, "rb")
         if client is None:
             client = GlobalClient()
         new_file = await client.upload_file(file)
@@ -221,26 +272,34 @@ class FileField(BaserowField, RootModel[list[File]]):
     async def append_file_from_url(
         self,
         url: str,
-        name: Optional[str] = None,
+        name: str | None = None,
         client: Client | None = None,
         register_pending_change: bool = True,
     ):
         """
-        TODO: HAS TO BE REWRITTEN!
-        Client/GlobalClient. Table.update() has to be called.
+        This method takes the URL of a publicly accessible file on the internet
+        and uploads it to Baserow's media storage and adds it to the file
+        field.Calling this method initiates the file upload, which may take some
+        time depending on the file size.
 
-        Uploads a new file from a url to Baserow and adds it to the local field
-        instance. Afterwards, this instance can be used with `Client.update_row()`
-        to update the file field in a row. Further information about uploading
-        and setting files can be found in the documentation of
-        `client.upload_file_via_url()`.
+        Further information about uploading and setting files can be found in
+        the documentation of `client.upload_file()`. After this method
+        `Table.update()` must be called manually to apply the changes.
 
         Args:
-            client (Client): Instance of a Baserow client to upload the file.
             url (str): The URL of the file.
-            name (str, optional): Optional file name, which will be displayed in
-                the Baserow user interface. This name is also used when a file
-                is downloaded from Baserow.
+            name (str | None): Optional human-readable name of the file, as it
+                should be displayed in the Baserow frontend.
+            client (Client | None): Specifies which API client should be used.
+                If none is provided, the `GlobalClient` will be used. Note that
+                this method does not automatically use the client associated
+                with the table.
+            register_pending_change (bool): Internal option for the
+                `FileField.from_file()` and `FileField.from_url()` methods. When
+                set to false, tracking of pending changes for this call is
+                disabled. This is only useful in situations where
+                `Table.update()` will be called anyway, such as when the method
+                is invoked within the initialization of a model.
         """
         if client is None:
             client = GlobalClient()
@@ -269,9 +328,9 @@ values of the select entry.
 
 class SelectEntry(BaseModel, Generic[SelectEnum]):
     """A entry in a single or multiple select field."""
-    entry_id: Optional[int] = Field(default=None, alias="id")
-    value: Optional[SelectEnum] = None
-    color: Optional[str] = None
+    entry_id: int | None = Field(default=None, alias="id")
+    value: SelectEnum | None = None
+    color: str | None = None
 
     model_config = ConfigDict(populate_by_name=True)
 
@@ -355,7 +414,7 @@ class SingleSelectField(SelectEntry[SelectEnum], BaserowField):
 
         class Book(Table):
             [...]
-            genre: Optional[SingleSelectField[Genre]] = Field(default=None)
+            genre: SingleSelectField[Genre] | None = Field(default=None)
 
         # Can use this...
         await Book(
@@ -408,7 +467,7 @@ class MultipleSelectField(BaserowField, RootModel[list[SelectEntry]], Generic[Se
 
         class Book(Table):
             [...]
-            keywords: Optional[MultipleSelectField[Keyword]] = Field(default=None)
+            keywords: MultipleSelectField[Keyword] | None = Field(default=None)
 
         await Book(
             keywords=MultipleSelectField.from_enums(Keyword.ADVENTURE, Keyword.FICTION)

@@ -186,52 +186,6 @@ await book.cover.append_file_from_url("https://picsum.photos/id/14/400/300")
 await book.update()
 ```
 
-## Note on the Examples Provided
-
-The code snippets demonstrated in this README assume a specific database structure, which consists of two tables: Person and Company. The examples are designed to utilize every field type available in Baserow, providing a comprehensive illustration of its capabilities. The sample data used here can be found in the examples directory and is importable into Baserow for your own experimentation. Please note that in the sample data, there are no Multiselect fields containing more than one item. You can expand the sections below to view the fields defined in each of the two tables.
-
-<details>
-  <summary>Person</summary>
-  <ul>
-    <li><b>Name</b> TextFieldConfig</li>
-    <li><b>Age</b> NumberFieldConfig</li>
-    <li><b>CV</b> LongTextFieldConfig</li>
-    <li><b>Former Employers</b> LinkFieldConfig</li>
-    <li><b>NDA Signed</b> BooleanFieldConfig</li>
-    <li><b>Employed since</b> DateFieldConfig</li>
-    <li><b>Rating</b> RatingFieldConfig</li>
-    <li><b>Last modified</b> LastModifiedFieldConfig</li>
-    <li><b>Last modified by</b> LastModifiedByFieldConfig</li>
-    <li><b>Created on</b> CreatedOnFieldConfig</li>
-    <li><b>Created by</b> CreatedByFieldConfig</li>
-    <li><b>Workhours per day</b> DurationFieldConfig</li>
-    <li><b>Personal Website</b> URLFieldConfig</li>
-    <li><b>E-Mail</b> EMailFieldConfig</li>
-    <li><b>Contract</b> FileFieldConfig</li>
-    <li><b>State</b> SingleSelectFieldConfig</li>
-    <li><b>Qualifications</b> MultipleSelectFieldConfig</li>
-    <li><b>Phone</b> PhoneNumberFieldConfig</li>
-    <li><b>Formula</b> FormulaFieldConfig</li>
-    <li><b>Rollup</b> RollupFieldConfig</li>
-    <li><b>Names Former Employers</b> LookupFieldConfig</li>
-    <li><b>Collaborators</b> MultipleCollaboratorsFieldConfig</li>
-    <li><b>UUID</b> UUIDFieldConfig</li>
-    <li><b>Autonumber</b> AutonumberFieldConfig</li>
-    <li><b>Password</b> PasswordFieldConfig</li>
-  </ul>
-</details>
-<details>
-  <summary>Company</summary>
-  <ul>
-    <li><b>Name</b> TextFieldConfig</li>
-    <li><b>E-Mail</b> EMailFieldConfig</li>
-    <li><b>Person</b> LinkFieldConfig</li>
-  </ul>
-</details>
-
-The example code provided frequently references two specific data models: `Person` and `Company`. You can find the `baserow.Table` Model definition in [examples/model.py](examples/model.py).
-
-
 ## Obtaining a Client
 
 The [`Client`](https://alex-berlin-tv.github.io/baserowdantic/baserow/client.html#Client) manages the actual HTTP calls to the Baserow REST API. It can be used directly or, ideally, through the model abstraction provided by Pydantic, which is the primary purpose of this package.

@@ -50,8 +50,8 @@
     </g>
     <g transform="matrix(1,0,0,1,-40,-0.219474)">
         <g transform="matrix(1,-0,-0,1,40,0.219474)">
-            <path d="M150.838,3.788L159,1L159.391,9.616L150.838,3.788Z" style="fill:rgb(230,237,243);"/>
-            <path d="M134,18C142.397,18 150.089,13.064 155.891,5.561" style="fill:none;stroke:rgb(230,237,243);stroke-width:2.3px;"/>
+            <path d="M150.896,3.953L159,1L159.566,9.606L150.896,3.953Z" style="fill:rgb(230,237,243);"/>
+            <path d="M136,18C144.374,18 150.644,13.092 155.985,5.624" style="fill:none;stroke:rgb(230,237,243);stroke-width:2.3px;"/>
         </g>
     </g>
 </svg>

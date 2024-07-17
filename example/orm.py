@@ -1,5 +1,5 @@
 import random
-from baserow.client import GlobalClient
+from baserow.client import BatchResponse, GlobalClient
 from baserow.field import CreatedByField, CreatedOnField, FileField, LastModifiedByField, LastModifiedOnField, MultipleCollaboratorsField, MultipleSelectField, SelectEntry, SingleSelectField
 from baserow.field_config import Config, LongTextFieldConfig, PrimaryField, RatingFieldConfig, RatingStyle
 from baserow.filter import AndFilter
@@ -172,7 +172,6 @@ async def populate_authors() -> list[int]:
         phone="+1 891 796 3774",
     ).create()
     ids.append(new_row.id)
-
     new_row = await Author(
         name="Jane Smith",
         age=30,
@@ -180,23 +179,36 @@ async def populate_authors() -> list[int]:
         phone="+1 303 555 0142",
     ).create()
     ids.append(new_row.id)
-
-    new_row = await Author(
-        name="Alice Johnson",
-        age=37,
-        email="alice.johnson@example.com",
-        phone="+1 404 555 0193",
-    ).create()
-    ids.append(new_row.id)
-
-    new_row = await Author(
-        name="Bob Brown",
-        age=35,
-        email="bob.brown@example.com",
-        phone="+1 505 555 0124",
-    ).create()
-    ids.append(new_row.id)
     return ids
+
+
+async def batch_populate_authors() -> list[int]:
+    """
+    When adding large amounts of data, it is recommended to use the batch
+    functionality of the `BasicClient().create_rows()`. In this case, only one
+    API call is made with all the newly added items.
+    """
+    new_rows: BatchResponse = await GlobalClient().create_rows(
+        Author.table_id,
+        [
+            Author(
+                name="Alice Johnson",
+                age=37,
+                email="alice.johnson@example.com",
+                phone="+1 404 555 0193",
+            ),
+            Author(
+                name="Bob Brown",
+                age=35,
+                email="bob.brown@example.com",
+                phone="+1 505 555 0124",
+            )
+        ],
+        True,
+    )
+    if hasattr(new_rows, "items"):
+        return [new_row.row_id for new_row in new_rows.items]
+    return []
 
 
 async def populate_books(author_ids: list[int]) -> list[int]:
@@ -331,10 +343,11 @@ async def query(author_ids: list[int], book_ids: list[int]):
 async def run():
     config_client()
     # await create_tables()
-    # author_ids = await populate_authors()
+    author_ids = await populate_authors()
+    author_ids.extend(await batch_populate_authors())
     # book_ids = await populate_books(author_ids)
     # await query(author_ids, book_ids)
-    await query([4], [5])  # TEST
+    # await query([4], [5])  # TEST
 
     # UPDATE ENTRY
     # TODO Text

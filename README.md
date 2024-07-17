@@ -149,6 +149,8 @@ second_book = await Book(
 
 Please note that `Table.create()` only returns a `MinimalRow`, which contains only the entry's `id`. The complete dataset must be retrieved using a `Table.by_id()` query.
 
+When adding large amounts of data, it is recommended to use the batch functionality of the BasicClient(). In this case, only one API call is made with all the newly added items. See this example in [examples/orm.py](https://github.com/alex-berlin-tv/baserowdantic/blob/main/example/orm.py).
+
 ### Querying Data
 
 Now that records are present in the table, you can start querying them. Besides a simple query by unique ID using [`Table.by_id()`](), you can also formulate complex query filters. Additionally, you can set the sorting, result page size, and the number of results. If you want to fetch all entries, you can set the `size` parameter to `-1`.

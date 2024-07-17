@@ -1,6 +1,6 @@
 """
 .. include:: ../../README.md
-   :start-after: baserowdantic
+   :start-line: 16
 """
 
 from importlib import util as importlib_util

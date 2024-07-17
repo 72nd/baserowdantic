@@ -151,6 +151,7 @@ Please note that `Table.create()` only returns a `MinimalRow`, which contains on
 
 When adding large amounts of data, it is recommended to use the batch functionality of the BasicClient(). In this case, only one API call is made with all the newly added items. See this example in [examples/orm.py](https://github.com/alex-berlin-tv/baserowdantic/blob/main/example/orm.py).
 
+
 ### Querying Data
 
 Now that records are present in the table, you can start querying them. Besides a simple query by unique ID using [`Table.by_id()`](), you can also formulate complex query filters. Additionally, you can set the sorting, result page size, and the number of results. If you want to fetch all entries, you can set the `size` parameter to `-1`.
@@ -195,7 +196,7 @@ for file in random_book.cover.root:
   print(f"Download the book cover: {file.url}")
 ```
 
-### Alter and delete some records
+### Alter data
 
 TODO.
 
@@ -207,6 +208,8 @@ TODO.
 await book.cover.append_file_from_url("https://picsum.photos/id/14/400/300")
 await book.update()
 ```
+
+### Delete records
 
 ## Obtaining a Client
 

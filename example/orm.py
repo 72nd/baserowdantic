@@ -340,14 +340,20 @@ async def query(author_ids: list[int], book_ids: list[int]):
             print(f"Download the book cover: {file.url}")
 
 
+async def update(author_ids: list[int], book_ids: list[int]):
+    pass
+
+
 async def run():
     config_client()
     # await create_tables()
-    author_ids = await populate_authors()
-    author_ids.extend(await batch_populate_authors())
+    # author_ids = await populate_authors()
+    # author_ids.extend(await batch_populate_authors())
     # book_ids = await populate_books(author_ids)
     # await query(author_ids, book_ids)
     # await query([4], [5])  # TEST
+    # await update(author_ids, book_ids)
+    await query([4], [5])  # TEST
 
     # UPDATE ENTRY
     # TODO Text

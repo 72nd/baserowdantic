@@ -302,6 +302,7 @@ class Table(BaseModel, abc.ABC):
     """
     ignore_fields_during_table_creation: ClassVar[list[str]] = ["order", "id"]
     """Fields with this name are ignored when creating tables."""
+    model_config = ConfigDict(ser_json_timedelta="float")
 
     @classmethod
     def __req_client(cls) -> Client:

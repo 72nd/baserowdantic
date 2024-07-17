@@ -22,6 +22,12 @@ USER_EMAIL = "your-login-mail@example.com"
 USER_PASSWORD = "your-secret-password"
 
 
+def example_image() -> str:
+    """Returns the path of the example image."""
+    example_folder = os.path.dirname(os.path.abspath(__file__))
+    return os.path.join(example_folder, "example.png")
+
+
 class Author(Table):
     """
     First, let's define the Authors table. Note the two class variables: table_id
@@ -216,6 +222,7 @@ async def populate_books(author_ids: list[int]) -> list[int]:
     Populate the book table. Returns the ids of the new entries.
     """
     ids: list[int] = []
+    # Add cover via local file path.
     new_row = await Book(
         title="The Great Adventure",
         description="A thrilling adventure story...",
@@ -223,7 +230,7 @@ async def populate_books(author_ids: list[int]) -> list[int]:
         genre=SingleSelectField.from_enum(Genre.FICTION),
         keywords=MultipleSelectField.from_enums(
             Keyword.ADVENTURE, Keyword.FICTION),
-        cover=await FileField.from_url("https://picsum.photos/180/320"),
+        cover=await FileField.from_file(example_image()),
         published_date=datetime(2024, 7, 17),
         reading_duration=timedelta(hours=8),
         available=True,
@@ -231,6 +238,8 @@ async def populate_books(author_ids: list[int]) -> list[int]:
     ).create()
     ids.append(new_row.id)
 
+    # Add cover from BufferedReader.
+    image = open(example_image(), "rb")
     new_row = await Book(
         title="Cooking with Love",
         description="Delicious recipes to share with loved ones...",
@@ -238,7 +247,7 @@ async def populate_books(author_ids: list[int]) -> list[int]:
         genre=SingleSelectField.from_enum(Genre.EDUCATION),
         keywords=MultipleSelectField.from_enums(
             Keyword.EDUCATION, Keyword.TECH),
-        cover=await FileField.from_url("https://picsum.photos/180/320"),
+        cover=await FileField.from_file(image),
         published_date=datetime(2021, 2, 10),
         reading_duration=timedelta(hours=6),
         available=True,
@@ -246,6 +255,7 @@ async def populate_books(author_ids: list[int]) -> list[int]:
     ).create()
     ids.append(new_row.id)
 
+    # Load cover from web URL.
     new_row = await Book(
         title="Mystery of the Night",
         description="A mystery novel set in the dark...",
@@ -340,8 +350,48 @@ async def query(author_ids: list[int], book_ids: list[int]):
             print(f"Download the book cover: {file.url}")
 
 
-async def update(author_ids: list[int], book_ids: list[int]):
-    pass
+async def update(book_ids: list[int]):
+    book_id = book_ids[0]
+
+    # Update by ID
+    await Book.update_fields_by_id(book_id, title="Gardening Basics")
+    print(f"Set title of book id={book_id} to 'Gardening Basics'")
+
+    # Update model instance: Manipulate by field name
+    book = await Book.by_id(book_id)
+    await book.update_fields(description="A beginner's guide to gardening.")
+    print(f"Set description of book id={book_id} to 'A beginner's guide to gardening.'")  # noqa
+
+    # Update model instance: Update instance to Baserow
+    book.published_date = datetime(2021, 3, 5)
+    book.reading_duration = timedelta(hours=6)
+    book.rating = 5
+    await book.update()
+
+    # Manipulate select fields.
+    if book.genre is not None:
+        # Set a new value for the single select field.
+        book.genre.set(Genre.EDUCATION)
+    if book.keywords is not None:
+        # Remove all current keywords.
+        book.keywords.clear()
+        # Add some new keywords.
+        book.keywords.append(
+            Keyword.EDUCATION, Keyword.BEGINNER, Keyword.MYSTERY, Keyword.FICTION,
+        )
+        # Remove a keyword.
+        book.keywords.remove(Keyword.MYSTERY, Keyword.FICTION)
+    await book.update()
+
+    # Modify file field
+    if book.cover is not None:
+        # Remove current file. And add two new ones.
+        book.cover.clear()
+        await book.cover.append_file(example_image())
+        await book.cover.append_file_from_url("https://picsum.photos/180/320")
+        await book.update()
+
+    # Batch update
 
 
 async def run():
@@ -352,8 +402,8 @@ async def run():
     # book_ids = await populate_books(author_ids)
     # await query(author_ids, book_ids)
     # await query([4], [5])  # TEST
-    # await update(author_ids, book_ids)
-    await query([4], [5])  # TEST
+    # await update(book_ids)
+    await update([3])
 
     # UPDATE ENTRY
     # TODO Text

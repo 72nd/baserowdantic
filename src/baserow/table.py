@@ -539,7 +539,8 @@ class Table(BaseModel, abc.ABC):
         documentation of this method.
         """
         if self.row_id is None:
-            raise RowIDNotSetError(self.__class__.__name__, "update")
+            raise RowIDNotSetError(self.__class__.__name__, "delete")
+        await self.delete_by_id(self.row_id)
 
     @classmethod
     async def create_table(cls, database_id: int):

@@ -135,7 +135,7 @@ class TableLinkField(BaserowField, RootModel[list[RowLink]], Generic[T]):
         return False
 
     @classmethod
-    def from_value(cls, instance: int | T | list[int | T]):
+    def from_value(cls, *instances: int | T):
         """
         Instantiates a link field from a referencing value. Can be used to set a
         link directly when instantiating a table model using a parameter. This
@@ -150,7 +150,8 @@ class TableLinkField(BaserowField, RootModel[list[RowLink]], Generic[T]):
             [...] title: str author: Optional[TableLinkField[Author]] =
             Field(default=None)
 
-        # Instead of... new_book = await Book(
+        # Instead of...
+        new_book = await Book(
             title="The Great Adventure", author=TableLinkField[Author](
                 root=[RowLink[Author](row_id=23, key=None)]
             )
@@ -167,12 +168,7 @@ class TableLinkField(BaserowField, RootModel[list[RowLink]], Generic[T]):
                 linked.
         """
         rsl = cls(root=[])
-        items: list[int | T] = []
-        if not isinstance(instance, list):
-            items = [instance]
-        else:
-            items = instance
-        for item in items:
+        for item in instances:
             if isinstance(item, int):
                 rsl.root.append(RowLink[T](row_id=item, key=None))
             elif item.row_id is None:

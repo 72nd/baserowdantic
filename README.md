@@ -198,9 +198,13 @@ for file in random_book.cover.root:
 
 ### Update records
 
-TODO.
+This section demonstrates how to modify existing entries in Baserow. The approach differs between basic types and advanced types like files or select fields. Let's start by looking at the basic types.
 
-Three way to manipulate basic fields. Last one is recommended. PENDING changes!
+There are three distinct methods to update entries. [`Table.update_fields_by_id()`]() is used when the ID of the row to be modified is known, but the full dataset is not yet available on the client. The fields to be updated are specified as keyword arguments.
+
+Similarly, [`Table.update_fields`]() uses keyword arguments but requires the complete instance to be available. Multiple fields can be updated by their names and corresponding values.
+
+Lastly, you can modify the local instance and then use [`Table.update()`]() to apply all changes to Baserow. This method is the only approach for advanced types. You have to remember to call the `update()` method. Otherwise your changes will be lost. The program will warn you, when a instance with unwritten changes was deleted by the garbage collector.
 
 ```python
 # Update by ID
@@ -236,7 +240,7 @@ book.keywords.remove(Keyword.MYSTERY, Keyword.FICTION)
 await book.update()
 ```
 
-Modify link fields. As multiple select fields.
+Modify link fields. Works almost As multiple select fields.
 
 ```python
 # Remove all current linked entries.
@@ -248,7 +252,7 @@ book.author.append(author_ids[1], author)
 await book.update()
 ```
 
-Modify file fields works alike. As always: Don't forget to update.
+Modify file fields. As always: Don't forget to update in the end.
 
 ```python
 # Remove current file. And add two new ones.
@@ -260,7 +264,7 @@ await book.update()
 
 ### Delete records
 
-TODO: Two ways: By ID or instance.
+There are two ways: Delete by `row_id` or call [`Table.delete()`]() on a instance.
 
 ```python
 # Delete by id

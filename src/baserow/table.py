@@ -194,6 +194,13 @@ class TableLinkField(BaserowField, RootModel[list[RowLink]], Generic[T]):
         not update the record on Baserow. You have to call `Table.update()`
         to apply the changes.
 
+        ```python
+        author = await Author.by_id(AUTHOR_ID)
+        book = await Book.by_id(BOOK_ROW_ID)
+        await book.author.append(ANOTHER_AUTHOR_ID, author)
+        await book.update()
+        ```
+
         Args:
             instance (int | T | list[int | T]): Instance(s) or row id(s) to be
                 added. When using a `Table` instance make sure that
@@ -219,6 +226,13 @@ class TableLinkField(BaserowField, RootModel[list[RowLink]], Generic[T]):
         """
         Deletes all linked entries. After that, `Table.update()` must be called
         to apply the changes.
+
+        ```python
+        book = await Book.by_id(BOOK_ROW_ID)
+        book.author.clear()
+        await book.update()
+        print("Removed all authors from the book")
+        ```
         """
         self.root.clear()
         self.register_pending_change("all links removed")
@@ -226,6 +240,12 @@ class TableLinkField(BaserowField, RootModel[list[RowLink]], Generic[T]):
     async def query_linked_rows(self) -> list[T]:
         """
         Queries and returns all linked rows.
+
+        ```python
+        book = await Book.by_id(BOOK_ROW_ID)
+        authors = await book.author.query_linked_rows()
+        print(f"Author(s) of book {book.title}: {authors}")
+        ```
         """
         rsl: list[T] = []
         for link in self.root:
@@ -237,7 +257,8 @@ class TableLinkField(BaserowField, RootModel[list[RowLink]], Generic[T]):
         """
         Same as `TableLinkField.query_linked_rows()` with cached results. The
         Baserow API is called only the first time. After that, the cached result
-        is returned directly.
+        is returned directly. This will also use the last result of
+        `TableLinkField.query_linked_rows()`.
         """
         if self._cache is None:
             self._cache = await self.query_linked_rows()

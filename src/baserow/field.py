@@ -218,6 +218,18 @@ class FileField(BaserowField, RootModel[list[File]]):
 
         Note that this method does not use the client associated with the table.
 
+        ```python
+        # By path.
+        await Book(
+            cover=await FileField.from_file("path/to/image.png"),
+        ).create()
+
+        # With BufferedReader.
+        await Book(
+            cover=await FileField.from_file(open("path/to/image.png", "rb")),
+        ).create()
+        ```
+
         Args:
             file (BufferedReader | str | Path): File to be uploaded.
             name (str | None): Optional human-readable name of the file, as it
@@ -243,7 +255,14 @@ class FileField(BaserowField, RootModel[list[File]]):
         and uploads it to Baserow's media storage, managing the linkage between
         the field and the stored file. Calling this method initiates the file
         upload, which may take some time depending on the file size.
+
         Note that this method does not use the client associated with the table.
+
+        ```python
+        await Book(
+            cover=await FileField.from_url("https://example.com/image.png"),
+        ).create()
+        ```
 
         Args:
             url (str): URL of the file to be uploaded.
@@ -274,6 +293,18 @@ class FileField(BaserowField, RootModel[list[File]]):
         Further information about uploading and setting files can be found in
         the documentation of `client.upload_file()`. After this method
         `Table.update()` must be called manually to apply the changes.
+
+        ```python
+        book = Book.by_id(ROW_ID)
+
+        # By path.
+        await book.cover.append_file("path/to/image.png")
+
+        # With BufferedReader.
+        await book.cover.append_file(open("path/to/image.png", "rb"))
+
+        book.update()
+        ```
 
         Args:
             file (BufferedReader | str | Path): File to be uploaded.
@@ -320,6 +351,12 @@ class FileField(BaserowField, RootModel[list[File]]):
         the documentation of `client.upload_file()`. After this method
         `Table.update()` must be called manually to apply the changes.
 
+        ```python
+        book = Book.by_id(ROW_ID)
+        await book.cover.append_file_from_url("https://example.com/image.png")
+        book.update()
+        ```
+
         Args:
             url (str): The URL of the file.
             name (str | None): Optional human-readable name of the file, as it
@@ -348,6 +385,12 @@ class FileField(BaserowField, RootModel[list[File]]):
         """
         Removes all files from field. After that, `Table.update()` must be called
         to apply the changes.
+
+        ```python
+        book = Book.by_id(ROW_ID)
+        await book.cover.clear()
+        book.update()
+        ```
         """
         self.root.clear()
         self.register_pending_change("remove all files in field")

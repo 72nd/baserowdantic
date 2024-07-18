@@ -424,20 +424,5 @@ async def run():
     await update(author_ids, book_ids)
     await delete()
 
-    # UPDATE ENTRY
-    # TODO Text
-    # book_entry = await Book.by_id(8)
-    # with open("misc/town.png", "rb") as f:
-    #     await book_entry.cover.append_file(f)
-    # await book_entry.cover.append_file_from_url("https://picsum.photos/id/14/400/300")
-    # await book_entry.update()
-    # if book_entry.author is not None:
-    #     book_entry.author.append(6)
-    #     await book_entry.update()
-    # if book_entry.genre is not None:
-    #     book_entry.genre.set(Genre.EDUCATION)
-    #     await book_entry.update()
-    # print(book_entry)
-
 
 asyncio.run(run())

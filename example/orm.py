@@ -379,7 +379,7 @@ async def update(author_ids: list[int], book_ids: list[int]):
         book.keywords.append(
             Keyword.EDUCATION, Keyword.BEGINNER, Keyword.MYSTERY, Keyword.FICTION,
         )
-        # Remove a keyword.
+        # Remove keyword(s).
         book.keywords.remove(Keyword.MYSTERY, Keyword.FICTION)
     await book.update()
 
@@ -400,7 +400,18 @@ async def update(author_ids: list[int], book_ids: list[int]):
         await book.cover.append_file_from_url("https://picsum.photos/180/320")
         await book.update()
 
-    # Batch update
+
+async def delete():
+    # Add some test entries.
+    author1 = await Author(name="Test 1", age=23).create()
+    author2 = await Author(name="Test 2", age=42).create()
+
+    # Delete by id
+    await Author.delete_by_id(author1.id)
+
+    # Delete by instance
+    author = await Author.by_id(author2.id)
+    await author.delete()
 
 
 async def run():
@@ -412,7 +423,7 @@ async def run():
     # await query(author_ids, book_ids)
     # await query([4], [5])  # TEST
     # await update(author_ids, book_ids)
-    await update([5, 6], [3])
+    await delete()
 
     # UPDATE ENTRY
     # TODO Text

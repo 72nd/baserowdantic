@@ -200,7 +200,7 @@ for file in random_book.cover.root:
 
 TODO.
 
-Three way to manipulate basic fields. Last one is recommended.
+Three way to manipulate basic fields. Last one is recommended. PENDING changes!
 
 ```python
 # Update by ID
@@ -259,6 +259,18 @@ await book.update()
 ```
 
 ### Delete records
+
+TODO: Two ways: By ID or instance.
+
+```python
+# Delete by id
+await Author.delete_by_id(ROW_ID)
+
+# Delete by instance
+author = await Author.by_id(ROW_ID)
+await author.delete()
+```
+
 
 ## Obtaining a Client
 

@@ -647,6 +647,8 @@ class Table(BaseModel, abc.ABC):
         else:
             config.name = name
 
+        config.description = field.description
+
         if name == primary_name:
             await cls.__req_client().update_database_table_field(primary_id, config)
         else:

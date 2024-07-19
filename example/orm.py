@@ -44,12 +44,19 @@ class Author(Table):
     model_config = ConfigDict(populate_by_name=True)
     """This model_config is necessary, otherwise it won't work."""
 
-    name: Annotated[str, Field(alias=str("Name")), PrimaryField()]
+    name: Annotated[
+        str,
+        Field(alias=str("Name"), description="The name of the author"),
+        PrimaryField(),
+    ]
     """Defines the name field as the primary field in Baserow."""
-    age: Optional[int] = Field(default=None, alias=str("Age"))
+    age: Optional[int] = Field(
+        default=None, alias=str("Age"), description="The age of the author",
+    )
     """
     Use the alias annotation if the field name in Baserow differs from the
-    variable name.
+    variable name. You can add a description which will be visible for the user
+    on Baserow.
     """
     email: Optional[str] = Field(default=None, alias=str("E-Mail"))
     phone: Optional[str] = Field(default=None, alias=str("Phone"))
@@ -87,7 +94,7 @@ class Book(Table):
     description: Annotated[
         Optional[str],
         Config(LongTextFieldConfig()),
-        Field(alias=str("CV")),
+        Field(description="What's this book about?", alias=str("Description")),
     ]
     """
     Since a long text field is also just a string, this configuration must be

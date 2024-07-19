@@ -74,7 +74,11 @@ class Author(Table):
     name: Annotated[str, Field(alias=str("Name")), PrimaryField()]
     # Use the alias annotation if the field name in Baserow differs from the
     # variable name.
-    age: int = Field(alias=str("Age"))
+    age: Optional[int] = Field(
+      default=None,
+      alias=str("Age"),
+      description="This field description will be visible for Baserow users",
+    )
 
 
 # Select fields are represented as enums. Therefore we define one for the genres.

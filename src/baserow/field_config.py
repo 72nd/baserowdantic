@@ -44,6 +44,10 @@ class FieldConfigBase(BaseModel, abc.ABC):
     to update the cell value. 
     """
     relate_fields: Optional[list[dict]] = None
+    description: Optional[str] = None
+    """
+    Optional human readable description for the field. Displayed in Baserow.
+    """
 
 
 class TextFieldConfig(FieldConfigBase):

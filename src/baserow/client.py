@@ -4,6 +4,7 @@ This module handles the interaction with Baserow's REST API over HTTP.
 
 from __future__ import annotations
 import asyncio
+from datetime import datetime, timedelta
 import enum
 from functools import wraps
 from io import BufferedReader
@@ -58,6 +59,12 @@ class TokenResponse(BaseModel):
     user: Any
     access_token: str
     refresh_token: str
+
+
+class TokenRefresh(BaseModel):
+    """Response from a token refresh call."""
+    user: Any
+    access_token: str
 
 
 class DatabaseTableResponse(BaseModel):
@@ -133,20 +140,64 @@ class Client:
     API calls. Access to the Baserow API requires authentication, and there are
     tow methods available: Database Tokens and JWT Tokens.
 
-    Database tokens are designed for delivering data to frontends and, as such,
-    can only perform CRUD (Create, Read, Update, Delete) operations on a
-    database. New tokens can be created in the User Settings, where their
-    permissions can also be configured. JWT Tokens are required for all other
-    functionalities, which can be obtained by providing login credentials (email
-    address and password) to the Baserow API. A client can only be initialized
-    with either the database token OR the login credentials.
+    **Database Tokens:** These tokens are designed for delivering data to
+    frontends and, as such, can only perform CRUD (Create, Read, Update, Delete)
+    operations on a database. New tokens can be created in the User Settings,
+    where their permissions can also be configured. For instance, it is possible
+    to create a token that only allows reading. These tokens have unlimited
+    validity.
+
+    ```python
+    from baserow import Client
+
+    client = Client("baserow.example.com", token="<API-TOKEN>")
+    ```
+
+    **JWT Tokens:** All other functionalities require a JWT token, which can be
+    obtained by providing login credentials (email address and password) to the
+    Baserow API. These tokens have a limited lifespan of 10 minutes and will be
+    refreshed if needed.
+
+    ```python
+    from baserow import Client
+
+    client = Client(
+        "baserow.example.com",
+        email="baserow.user@example.com",
+        password="<PASSWORD>",
+    )
+    ```
+
+    **Singleton/Global Client.** In many applications, maintaining a consistent
+    connection to a single Baserow instance throughout the runtime is crucial.
+    To facilitate this, the package provides a Global Client, which acts as a
+    singleton. This means the client needs to be configured just once using
+    GlobalClient.configure(). After this initial setup, the Global Client can be
+    universally accessed and used throughout the program.
+
+    When utilizing the ORM functionality of the table models, all methods within
+    the `Table` models inherently use this Global Client. Please note that the
+    Global Client can only be configured once. Attempting to call the
+    GlobalClient.configure() method more than once will result in an exception.
+
+    ```python
+    # Either configure the global client with a database token...
+    GlobalClient.configure("baserow.example.com", token="<API-TOKEN>")
+
+    # ...or with the login credentials (email and password).
+    GlobalClient.configure(
+        "baserow.example.com",
+        email="baserow.user@example.com",
+        password="<PASSWORD>",
+    )
+    ```
 
     This client can also be used directly, without utilizing the ORM
     functionality of the package.
 
     Args:
-        url (str): The base URL of the Baserow instance.
-        token (str, optional): An access token (referred to as a database token
+        url (str): The base URL of the Baserow instance. token (str, optional):
+        An access token (referred to as a database token
             in Baserow's documentation) can be generated in the user settings
             within Baserow.
         email (str, optional): Email address of a Baserow user for the JWT
@@ -184,6 +235,9 @@ class Client:
         self._auth_method = AuthMethod.DATABASE_TOKEN if token else AuthMethod.JWT
         # Cache is only accessed by __header() method.
         self.__headers_cache: Optional[dict[str, str]] = None
+        self.__jwt_access_token: str | None = None
+        self.__jwt_refresh_token: str | None = None
+        self.__jwt_token_age: datetime | None = None
 
     async def token_auth(self, email: str, password: str) -> TokenResponse:
         """
@@ -208,6 +262,25 @@ class Client:
             TokenResponse,
             headers=CONTENT_TYPE_JSON,
             json={"email": email, "password": password},
+            use_default_headers=False,
+        )
+
+    async def token_refresh(self, refresh_token: str) -> TokenRefresh:
+        """
+        Generate a new JWT access_token that can be used to continue operating
+        on Baserow starting from a valid refresh token. The initial JWT access
+        and refresh token can be generated using `Client.token_auth()`.
+
+        Args:
+            refresh_token: The JWT refresh token obtained by
+                `Client.token_auth()`.
+        """
+        return await self._typed_request(
+            "post",
+            _url_join(self._url, API_PREFIX, "user/token-refresh"),
+            TokenRefresh,
+            headers=CONTENT_TYPE_JSON,
+            json={"refresh_token": refresh_token},
             use_default_headers=False,
         )
 
@@ -922,27 +995,46 @@ class Client:
         """
         await self._session.close()
 
+    async def __get_jwt_access_token(self) -> str:
+        if self._email is None or self._password is None:
+            raise ValueError("email and password have to be set")
+        if self.__jwt_access_token is None or self.__jwt_refresh_token is None or self.__jwt_token_age is None:
+            # Need initialize token.
+            rsp = await self.token_auth(self._email, self._password)
+            self.__jwt_access_token = rsp.access_token
+            self.__jwt_refresh_token = rsp.refresh_token
+            self.__jwt_token_age = datetime.now()
+        elif self.__jwt_token_age < datetime.now() - timedelta(minutes=10):
+            # Token has to be refreshed.
+            rsp = await self.token_refresh(self.__jwt_refresh_token)
+            self.__jwt_access_token = rsp.access_token
+            self.__jwt_token_age = datetime.now()
+        return self.__jwt_access_token
+
     async def __headers(
         self,
         parts: Optional[dict[str, str]],
     ) -> dict[str, str]:
-        if self.__headers_cache is not None:
-            if parts is not None:
-                rsl = self.__headers_cache.copy()
-                rsl.update(parts)
-                return rsl
-            return self.__headers_cache
+        # if self.__headers_cache is not None:
+        #     if parts is not None:
+        #         rsl = self.__headers_cache.copy()
+        #         rsl.update(parts)
+        #         return rsl
+        #     return self.__headers_cache
+        rsl: dict[str, str] = {}
+        if parts is not None:
+            rsl = parts
 
         if self._token:
             token = f"Token {self._token}"
         elif self._email and self._password:
-            rsp = await self.token_auth(self._email, self._password)
-            token = f"JWT {rsp.access_token}"
+            access_token = await self.__get_jwt_access_token()
+            token = f"JWT {access_token}"
         else:
             raise RuntimeError("logic error, shouldn't be possible")
 
-        self.__headers_cache = {"Authorization": token}
-        return await self.__headers(parts)
+        rsl["Authorization"] = token
+        return rsl
 
     async def _typed_request(
         self,

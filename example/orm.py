@@ -46,7 +46,7 @@ class Author(Table):
 
     name: Annotated[str, Field(alias=str("Name")), PrimaryField()]
     """Defines the name field as the primary field in Baserow."""
-    age: int = Field(alias=str("Age"))
+    age: Optional[int] = Field(default=None, alias=str("Age"))
     """
     Use the alias annotation if the field name in Baserow differs from the
     variable name.
@@ -63,6 +63,10 @@ class Genre(str, enum.Enum):
 
 
 class Keyword(str, enum.Enum):
+    """
+    Baserow also has multiple select field. We use this book keywords as an
+    example.
+    """
     ADVENTURE = "Adventure"
     FICTION = "Fiction"
     SQL = "SQL"

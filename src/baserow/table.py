@@ -49,7 +49,7 @@ T = TypeVar("T", bound="Table")
 class RowLink(BaseModel, Generic[T]):
     """
     A single linking of one row to another row in another table. A link field
-    can have multiple links. Part of `field.TableLinkField`.
+    can have multiple links. Part of `table.TableLinkField`.
     """
     row_id: Optional[int] = Field(alias=str("id"))
     key: Optional[str] = Field(alias=str("value"))
@@ -164,7 +164,7 @@ class TableLinkField(BaserowField, RootModel[list[RowLink]], Generic[T]):
         ).create() ```
 
         Args:
-            instance (int | T | list[int | T]): Instance(s) or row id(s) to be
+            *instance (int | T): Instance(s) or row id(s) to be
                 linked.
         """
         rsl = cls(root=[])

@@ -31,9 +31,7 @@ The package can be used in two different ways:
 
 ## Walkthrough / Introductory Example
 
-This sections offers a hands-on look at the ORM capabilities of baserowdantic. You can find a running version of this code at [example/orm.py](https://github.com/alex-berlin-tv/baserowdantic/blob/main/example/orm.py).
-
-**Not in the mood for lengthy explanations?** Then check out the [examples/orm.py](https://github.com/alex-berlin-tv/baserowdantic/blob/main/example/orm.py) example directly. It demonstrates how to work with all the implemented field types.
+This sections offers a hands-on look at the ORM capabilities of baserowdantic. **Not in the mood for lengthy explanations?** Then check out the [examples/orm.py](https://github.com/alex-berlin-tv/baserowdantic/blob/main/example/orm.py) example directly. It demonstrates how to work with all the implemented field types.
 
 This introduction provides only a brief overview of the functions. For a more detailed description of all features, please refer to the sections below.
 
@@ -285,9 +283,9 @@ The [`Client`](https://alex-berlin-tv.github.io/baserowdantic/baserow/client.htm
 Access to the Baserow API requires authentication, and there are [two methods available](https://baserow.io/docs/apis/rest-api) for this:
 
 - **Database Tokens:** These tokens are designed for delivering data to frontends and, as such, can only perform CRUD (Create, Read, Update, Delete) operations on a database. New tokens can be created in the User Settings, where their permissions can also be configured. For instance, it is possible to create a token that only allows reading. These tokens have unlimited validity.
-- **JWT Tokens:** All other functionalities require a JWT token, which can be obtained by providing login credentials (email address and password) to the Baserow API. These tokens have a limited lifespan of 10 minutes. Please note that baserowdantic currently is not able to refresh the token.
+- **JWT Tokens:** All other functionalities require a JWT token, which can be obtained by providing login credentials (email address and password) to the Baserow API. These tokens have a limited lifespan of 10 minutes and will be refreshed if needed.
 
-The client in this package can handle both types of tokens. During initialization, you can provide either a Database Token or the email address and password of a user account. For most use cases, the Database Token is sufficient and recommended. The JWT Token is required only for creating new tables or fields within them. For long-running applications, the Database Token is essential since this package currently does not implement refreshing of JWT Tokens.
+The client in this package can handle both types of tokens. During initialization, you can provide either a Database Token or the email address and password of a user account. For most use cases, the Database Token is sufficient and recommended.
 
 The following example demonstrates how to instantiate the client using either of the available authentication methods. Please note that only one of these methods should be used at a time.
 

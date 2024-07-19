@@ -1,6 +1,6 @@
 import random
 from baserow.client import BatchResponse, GlobalClient
-from baserow.field import CreatedByField, CreatedOnField, FileField, LastModifiedByField, LastModifiedOnField, MultipleCollaboratorsField, MultipleSelectField, SelectEntry, SingleSelectField
+from baserow.field import CreatedByField, CreatedOnField, FileField, LastModifiedByField, LastModifiedOnField, MultipleCollaboratorsField, MultipleSelectField, SingleSelectField
 from baserow.field_config import Config, LongTextFieldConfig, PrimaryField, RatingFieldConfig, RatingStyle
 from baserow.filter import AndFilter
 from baserow.table import Table, TableLinkField

@@ -123,6 +123,10 @@ await Author.create_table(227)
 await Book.create_table(227)
 ```
 
+Head to your baserow installation. You'll find two new tables »Author« and »Book«. Which look something like this:
+
+![The book table in Baserow](misc/book-table.png)
+
 ### Creating entries
 
 Now that the tables are set up in the database, you can start populating them with entries. The following example provides insights into the various methods available.

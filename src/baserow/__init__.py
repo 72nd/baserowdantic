@@ -10,3 +10,5 @@ from importlib import util as importlib_util
 if importlib_util.find_spec("pdoc") is not None:
     from pdoc import render_helpers
     render_helpers.markdown_extensions["toc"]["depth"] = 3
+
+__version__ = "0.1.0"

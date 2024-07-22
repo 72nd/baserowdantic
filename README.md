@@ -123,9 +123,6 @@ await Author.create_table(227)
 await Book.create_table(227)
 ```
 
-Head to your baserow installation. You'll find two new tables »Author« and »Book«. Which look something like this:
-
-![The book table in Baserow](misc/book-table.png)
 
 ### Creating entries
 
@@ -155,7 +152,9 @@ second_book = await Book(
 
 Please note that `Table.create()` only returns a `MinimalRow`, which contains only the entry's `id`. The complete dataset must be retrieved using a `Table.by_id()` query.
 
-When adding large amounts of data, it is recommended to use the batch functionality of the BasicClient(). In this case, only one API call is made with all the newly added items. See this example in [examples/orm.py](https://github.com/alex-berlin-tv/baserowdantic/blob/main/example/orm.py).
+When adding large amounts of data, it is recommended to use the batch functionality of the BasicClient(). In this case, only one API call is made with all the newly added items. See this example in [examples/orm.py](https://github.com/alex-berlin-tv/baserowdantic/blob/main/example/orm.py). Head now to your baserow installation. You'll find two new tables »Author« and »Book«. Which look something like this:
+
+![The book table in Baserow](misc/book-table.png)
 
 
 ### Querying Data

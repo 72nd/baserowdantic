@@ -1,6 +1,10 @@
+[build-system]
+requires = ["flit_core"]
+build-backend = "flit_core.buildapi"
+
 [project]
 name = "baserowdantic"
-version = "0.1.0"
+dynamic = ["version"]
 authors = [
     {name = "Irvin Hostettler, ALEX Berlin", email = "hostettler@alex-berlin.de"}
 ]
@@ -11,7 +15,6 @@ dependencies = [
     "aiohttp",
     "pydantic"
 ]
-
 classifiers = [
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3.9",

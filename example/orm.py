@@ -17,7 +17,7 @@ from typing import Optional
 
 # ADAPT THIS CONSTANTS TO YOUR ENVIRONMENT. Or add a `secrets.json` in the
 # examples folder.
-BASEROW_URL = "https://your.baserow.instance"
+BASEROW_URL = "https:/your.baserow.instance"
 USER_EMAIL = "your-login-mail@example.com"
 USER_PASSWORD = "your-secret-password"
 
@@ -159,13 +159,7 @@ def config_client():
             password=USER_PASSWORD,
         )
         return
-    with open(secrets_file, "r") as f:
-        data = json.load(f)
-    GlobalClient.configure(
-        data["url"],
-        email=data["email"],
-        password=data["password"],
-    )
+    GlobalClient.from_file(secrets_file)
 
 
 async def create_tables():

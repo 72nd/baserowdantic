@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 import enum
 from functools import wraps
 from io import BufferedReader
+import json
 from typing import Any, Generic, Optional, Type, TypeVar, Union
 
 import aiohttp
@@ -1127,6 +1128,10 @@ class GlobalClient(Client):
     The Singleton pattern ensures that only one instance of the client is used
     throughout the entire program, thereby maintaining full control over the
     `aiohttp.ClientSession`.
+
+    The configuration can be done either directly in the code using
+    `GlobalClient.configure()` or from a JSON file using
+    `GlobalClient.from_file()`.
     """
     _instance: Optional[Client] = None
     _is_initialized: bool = False
@@ -1180,3 +1185,40 @@ class GlobalClient(Client):
         cls.__email = email
         cls.__password = password
         cls.is_configured = True
+
+    @classmethod
+    def from_file(cls, path: str):
+        """
+        Attempts to load the client configuration from the given JSON file. As
+        with `GlobalClient.configure()`, it is only possible to use either the
+        token or the login credentials. Structure of the config file for Token:
+
+        ```json
+        {
+            "url": "https:/your.baserow.instance"
+            "token": "your_token_here"
+        }
+        ```
+
+        For JWT authentication using login credentials:
+
+        ```json
+        {
+            "url": "https:/your.baserow.instance"
+            "email": "your-login-mail@example.com",
+            "password": "your-secret-password"
+        }
+        ```
+
+        Args:
+            path: Path to input JSON-file.
+        """
+        with open(path, "r") as f:
+            cfg = json.load(f)
+
+        cls.configure(
+            cfg["url"],
+            token=cfg["token"] if "token" in cfg else None,
+            email=cfg["email"] if "email" in cfg else None,
+            password=cfg["password"] if "password" in cfg else None,
+        )

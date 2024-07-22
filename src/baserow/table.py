@@ -8,7 +8,7 @@ from functools import wraps
 from typing import Any, ClassVar, Generic, Optional, Tuple, Type, TypeVar, Union, get_args, get_origin
 import uuid
 
-from pydantic import UUID4, BaseModel, ConfigDict, Field, RootModel, model_serializer, model_validator
+from pydantic import BaseModel, ConfigDict, Field, RootModel, model_serializer, model_validator
 from pydantic.fields import FieldInfo
 
 from baserow.client import Client, GlobalClient, MinimalRow

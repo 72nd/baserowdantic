@@ -9,7 +9,7 @@
 </p>
 <p align="center">
   <a href="https://72nd.github.io/baserowdantic/baserow.html">📙 Documentation</a> – 
-  <a href="https://github.com/alex-berlin-tv/baserowdantic/blob/main/example/orm.py">🚀 Comprehensive example</a>
+  <a href="https://github.com/72nd/baserowdantic/blob/main/example/orm.py">🚀 Comprehensive example</a>
 </p>
 
 # baserowdantic
@@ -31,7 +31,7 @@ The package can be used in two different ways:
 
 ## Walkthrough / Introductory Example
 
-This sections offers a hands-on look at the ORM capabilities of baserowdantic. **Not in the mood for lengthy explanations?** Then check out the [examples/orm.py](https://github.com/alex-berlin-tv/baserowdantic/blob/main/example/orm.py) example directly. It demonstrates how to work with all the implemented field types.
+This sections offers a hands-on look at the ORM capabilities of baserowdantic. **Not in the mood for lengthy explanations?** Then check out the [examples/orm.py](https://github.com/72nd/baserowdantic/blob/main/example/orm.py) example directly. It demonstrates how to work with all the implemented field types.
 
 This introduction provides only a brief overview of the functions. For a more detailed description of all features, please refer to the sections below.
 
@@ -51,7 +51,7 @@ GlobalClient.configure(
 
 ### Defining the Models
 
-First, we need to define the structure of the two tables (authors and books) in a model. Please note the class variables `table_id` and `table_name`. These link the model to the corresponding table in Baserow.
+First, we need to define the structure of the two tables (authors and books) in a [`Table`](https://72nd.github.io/baserowdantic/baserow/table.html#Table) model. Please note the class variables [`table_id`](https://72nd.github.io/baserowdantic/baserow/table.html#Table.table_id) and [`table_name`](https://72nd.github.io/baserowdantic/baserow/table.html#Table.table_name). These link the model to the corresponding table in Baserow.
 
 ```python
 from baserow.client import GlobalClient
@@ -114,7 +114,7 @@ class Book(Table):
 
 ### Create tables
 
-With the model defining the table structure, baserowdantic can create the tables based on it. This step requires authentication using login credentials (JWT Tokens, more info [here](#authentication)). The `table_id` ClassVar does not need to be set in the model when initially creating the table in Baserow. However, it must be set afterward to allow further modifications to the table.
+With the model defining the table structure, baserowdantic's [`Table.create_table()`](https://72nd.github.io/baserowdantic/baserow/table.html#Table.create_table) can create the tables based on it. This step requires authentication using login credentials (JWT Tokens, more info [here](#authentication)). The `table_id` ClassVar does not need to be set in the model when initially creating the table in Baserow. However, it must be set afterward to allow further modifications to the table.
 
 The method requires the database ID where the table should be created. You can find this ID in the Baserow user interface.
 
@@ -126,7 +126,7 @@ await Book.create_table(227)
 
 ### Creating entries
 
-Now that the tables are set up in the database, you can start populating them with entries. The following example provides insights into the various methods available.
+Now that the tables are set up in the database, you can start populating them with entries using [`Table.create()](https://72nd.github.io/baserowdantic/baserow/table.html#Table.create). The following example provides insights into the various methods available.
 
 ```python
 # Let's start by creating a few authors.
@@ -141,25 +141,29 @@ first_book = await Book(
   genre=SingleSelectField.from_enum(Genre.FICTION),
   author=TableLinkField[Author].from_value(john.id),
   cover=await FileField.from_file(open("path/to/cover.png", "rb")),
-)
+).create()
 second_book = await Book(
   title="Mystery of the Night",
   genre=SingleSelectField.from_enum(Genre.MYSTERY),
   author=TableLinkField[Author].from_value(jane.id),
   cover=await FileField.from_url("https://picsum.photos/id/14/400/300")
-)
+).create()
 ```
 
-Please note that `Table.create()` only returns a `MinimalRow`, which contains only the entry's `id`. The complete dataset must be retrieved using a `Table.by_id()` query.
+Please note that [`Table.create()`](https://72nd.github.io/baserowdantic/baserow/table.html#Table.create) only returns a [`MinimalRow`](https://72nd.github.io/baserowdantic/baserow/client.html#MinimalRow), which contains only the entry's `id`. The complete dataset must be retrieved using a [`Table.by_id()`](https://72nd.github.io/baserowdantic/baserow/table.html#Table.by_id) query.
 
-When adding large amounts of data, it is recommended to use the batch functionality of the BasicClient(). In this case, only one API call is made with all the newly added items. See this example in [examples/orm.py](https://github.com/alex-berlin-tv/baserowdantic/blob/main/example/orm.py). Head now to your baserow installation. You'll find two new tables »Author« and »Book«. Which look something like this:
+```python
+complete_first_book_entry = await Book.by_id(first_book.id)
+```
+
+When adding large amounts of data, it is recommended to use the batch functionality of the BasicClient(). In this case, only one API call is made with all the newly added items. See this example in [examples/orm.py](https://github.com/72nd/baserowdantic/blob/main/example/orm.py). Head now to your baserow installation. You'll find two new tables »Author« and »Book«. Which look something like this:
 
 ![The book table in Baserow](misc/book-table.png)
 
 
 ### Querying Data
 
-Now that records are present in the table, you can start querying them. Besides a simple query by unique ID using [`Table.by_id()`](), you can also formulate complex query filters. Additionally, you can set the sorting, result page size, and the number of results. If you want to fetch all entries, you can set the `size` parameter to `-1`.
+Now that records are present in the table, you can start querying them. Besides a simple query by unique ID using [`Table.by_id()`](https://72nd.github.io/baserowdantic/baserow/table.html#Table.by_id), you can also formulate complex query filters (based on a [`AndFilter`](https://72nd.github.io/baserowdantic/baserow/filter.html#AndFilter) or [`OrFilter`](https://72nd.github.io/baserowdantic/baserow/filter.html#OrFilter)). Additionally, you can set the sorting, result page size, and the number of results. If you want to fetch all entries, you can set the `size` parameter to `-1`.
 
 ```python
 # Getting the entry by its unique ID.
@@ -182,7 +186,7 @@ all_books = await Author.query(size=-1)
 print(f"All books: {all_books}")
 ```
 
-Let's now take a look at Linked Fields. For linked entries, initially only the key value and the row_id of the linked records are available. Using `TableLinkField.query_linked_rows()`, the complete entries of all linked records can be retrieved. When dealing with complex database structures where many rows have multiple linked entries, this can lead to significant wait times due to repeated queries. To address this, there is an option to cache the results. If `TableLinkField.cached_query_linked_rows()` is used, the dataset is queried only the first time.
+Let's now take a look at Linked Fields. For linked entries, initially only the key value and the row_id of the linked records are available. Using [`TableLinkField.query_linked_rows()`](https://72nd.github.io/baserowdantic/baserow/table.html#TableLinkField.query_linked_rows), the complete entries of all linked records can be retrieved. When dealing with complex database structures where many rows have multiple linked entries, this can lead to significant wait times due to repeated queries. To address this, there is an option to cache the results. If [`TableLinkField.cached_query_linked_rows()`](https://72nd.github.io/baserowdantic/baserow/table.html#TableLinkField.cached_query_linked_rows) is used, the dataset is queried only the first time.
 
 ```python
 book = Book.by_id(BOOK_ID)
@@ -194,7 +198,7 @@ print(f"Author(s) of book {book.title}: {authors}")
 print(await book.author.cached_query_linked_rows())
 ```
 
-To access stored files, you can use the download URL. Please note that for security reasons, this link has a limited validity.
+To access stored files, you can use the download URL. Please note that for security reasons, this links have a limited validity.
 
 ```python
 for file in random_book.cover.root:
@@ -205,11 +209,11 @@ for file in random_book.cover.root:
 
 This section demonstrates how to modify existing entries in Baserow. The approach differs between basic types and advanced types like files or select fields. Let's start by looking at the basic types.
 
-There are three distinct methods to update entries. [`Table.update_fields_by_id()`]() is used when the ID of the row to be modified is known, but the full dataset is not yet available on the client. The fields to be updated are specified as keyword arguments.
+There are three distinct methods to update entries. [`Table.update_fields_by_id()`](https://72nd.github.io/baserowdantic/baserow/table.html#Table.update_fields_by_id) is used when the ID of the row to be modified is known, but the full dataset is not yet available on the client. The fields to be updated are specified as keyword arguments.
 
-Similarly, [`Table.update_fields`]() uses keyword arguments but requires the complete instance to be available. Multiple fields can be updated by their names and corresponding values.
+Similarly, [`Table.update_fields`](https://72nd.github.io/baserowdantic/baserow/table.html#Table.update_fields) uses keyword arguments but requires the complete instance to be available. Multiple fields can be updated by their names and corresponding values.
 
-Lastly, you can modify the local instance and then use [`Table.update()`]() to apply all changes to Baserow. This method is the only approach for advanced types. You have to remember to call the `update()` method. Otherwise your changes will be lost. The program will warn you, when a instance with unwritten changes was deleted by the garbage collector.
+Lastly, you can modify the local instance and then use [`Table.update()`](https://72nd.github.io/baserowdantic/baserow/table.html#Table.update) to apply all changes to Baserow. This method is the only approach for advanced types. You have to remember to call the `update()` method. Otherwise your changes will be lost. The program will warn you, when a instance with unwritten changes was deleted by the garbage collector.
 
 ```python
 # Update by ID
@@ -269,7 +273,7 @@ await book.update()
 
 ### Delete records
 
-There are two ways: Delete by `row_id` or call [`Table.delete()`]() on a instance.
+There are two ways: Delete by `row_id` using [`Table.delete_by_id()`](https://72nd.github.io/baserowdantic/baserow/table.html#Table.delete) or call [`Table.delete()`](https://72nd.github.io/baserowdantic/baserow/table.html#Table.delete) on a instance.
 
 ```python
 # Delete by id
@@ -556,5 +560,5 @@ client.create_database_field(
 
 ## ORM-like access using models
 
-**Note:** This former part of the README was removed in favor of a more in dept introduction example, the [comprehensive ORM example](https://github.com/alex-berlin-tv/baserowdantic/blob/main/example/orm.py) and more examples in the API documentation.
+**Note:** This former part of the README was removed in favor of a more in dept introduction example, the [comprehensive ORM example](https://github.com/72nd/baserowdantic/blob/main/example/orm.py) and more examples in the API documentation.
 

@@ -5,7 +5,7 @@
 </picture>
 </p>
 <p align="center">
-  <img src="misc/logo.svg" alt="" width="350">
+  <img src="https://raw.githubusercontent.com/72nd/baserowdantic/main/misc/logo.svg" alt="" width="350">
 </p>
 <p align="center">
   <a href="https://72nd.github.io/baserowdantic/baserow.html">📙 Documentation</a> – 

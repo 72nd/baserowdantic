@@ -156,9 +156,10 @@ Please note that [`Table.create()`](https://72nd.github.io/baserowdantic/baserow
 complete_first_book_entry = await Book.by_id(first_book.id)
 ```
 
-When adding large amounts of data, it is recommended to use the batch functionality of the BasicClient(). In this case, only one API call is made with all the newly added items. See this example in [examples/orm.py](https://github.com/72nd/baserowdantic/blob/main/example/orm.py). Head now to your baserow installation. You'll find two new tables »Author« and »Book«. Which look something like this:
+Head now to your baserow installation. You'll find two new tables »Author« and »Book«. Which look something like this:
 
 ![The book table in Baserow](misc/book-table.png)
+When adding large amounts of data, it is recommended to use the batch functionality of the BasicClient(). In this case, only one API call is made with all the newly added items. See this example in [examples/orm.py](https://github.com/72nd/baserowdantic/blob/main/example/orm.py).
 
 
 ### Querying Data
@@ -273,7 +274,7 @@ await book.update()
 
 ### Delete records
 
-There are two ways: Delete by `row_id` using [`Table.delete_by_id()`](https://72nd.github.io/baserowdantic/baserow/table.html#Table.delete) or call [`Table.delete()`](https://72nd.github.io/baserowdantic/baserow/table.html#Table.delete) on a instance.
+There are two ways: Delete by `row_id` using [`Table.delete_by_id()`](https://72nd.github.io/baserowdantic/baserow/table.html#Table.delete_by_id) or call [`Table.delete()`](https://72nd.github.io/baserowdantic/baserow/table.html#Table.delete) on a instance.
 
 ```python
 # Delete by id

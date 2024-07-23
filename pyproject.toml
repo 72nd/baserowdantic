@@ -1,5 +1,5 @@
 # [build-system]
-# requires = ["flit_core"]
+# requires = ["flit_core >=3.4,<4"]
 # build-backend = "flit_core.buildapi"
 
 [project]
@@ -13,7 +13,8 @@ readme = "README.md"
 keywords = ["baserow", "pydantic", "no-code", "orm", "database"]
 dependencies = [
     "aiohttp",
-    "pydantic"
+    "pydantic",
+    "typing_extensions"
 ]
 classifiers = [
     "License :: OSI Approved :: MIT License",

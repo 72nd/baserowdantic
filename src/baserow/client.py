@@ -236,9 +236,9 @@ class Client:
         self._auth_method = AuthMethod.DATABASE_TOKEN if token else AuthMethod.JWT
         # Cache is only accessed by __header() method.
         self.__headers_cache: Optional[dict[str, str]] = None
-        self.__jwt_access_token: str | None = None
-        self.__jwt_refresh_token: str | None = None
-        self.__jwt_token_age: datetime | None = None
+        self.__jwt_access_token: Optional[str] = None
+        self.__jwt_refresh_token: Optional[str] = None
+        self.__jwt_token_age: Optional[datetime] = None
 
     async def token_auth(self, email: str, password: str) -> TokenResponse:
         """

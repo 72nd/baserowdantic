@@ -112,8 +112,8 @@ class User(BaseModel):
     """
     A table field that contains one Baserow system user.
     """
-    user_id: int | None = Field(alias=str("id"))
-    name: str | None = Field(alias=str("name"))
+    user_id: Optional[int] = Field(alias=str("id"))
+    name: Optional[str] = Field(alias=str("name"))
 
 
 class CreatedByField(User, BaserowField):
@@ -206,8 +206,8 @@ class FileField(BaserowField, RootModel[list[File]]):
     async def from_file(
         cls,
         file: BufferedReader | str | Path,
-        name: str | None = None,
-        client: Client | None = None,
+        name: Optional[str] = None,
+        client: Optional[Client] = None,
     ):
         """
         This method takes a local file (either as a `BufferedReader` or as a
@@ -247,8 +247,8 @@ class FileField(BaserowField, RootModel[list[File]]):
     async def from_url(
         cls,
         url: str,
-        name: str | None = None,
-        client: Client | None = None,
+        name: Optional[str] = None,
+        client: Optional[Client] = None,
     ):
         """
         This method takes the URL of a publicly accessible file on the internet
@@ -280,8 +280,8 @@ class FileField(BaserowField, RootModel[list[File]]):
     async def append_file(
         self,
         file: BufferedReader | str | Path,
-        name: str | None = None,
-        client: Client | None = None,
+        name: Optional[str] = None,
+        client: Optional[Client] = None,
         register_pending_change: bool = True,
     ):
         """
@@ -337,8 +337,8 @@ class FileField(BaserowField, RootModel[list[File]]):
     async def append_file_from_url(
         self,
         url: str,
-        name: str | None = None,
-        client: Client | None = None,
+        name: Optional[str] = None,
+        client: Optional[Client] = None,
         register_pending_change: bool = True,
     ):
         """
@@ -405,9 +405,9 @@ values of the select entry.
 
 class SelectEntry(BaseModel, Generic[SelectEnum]):
     """A entry in a single or multiple select field."""
-    entry_id: int | None = Field(default=None, alias="id")
-    value: SelectEnum | None = None
-    color: str | None = None
+    entry_id: Optional[int] = Field(default=None, alias="id")
+    value: Optional[SelectEnum] = None
+    color: Optional[str] = None
 
     model_config = ConfigDict(populate_by_name=True)
 
@@ -495,7 +495,7 @@ class SingleSelectField(SelectEntry[SelectEnum], BaserowField):
 
         class Book(Table):
             [...]
-            genre: SingleSelectField[Genre] | None = Field(default=None)
+            genre: Optional[SingleSelectField[Genre]] = Field(default=None)
 
         # Can use this...
         await Book(
@@ -552,7 +552,7 @@ class MultipleSelectField(BaserowField, RootModel[list[SelectEntry]], Generic[Se
 
         class Book(Table):
             [...]
-            keywords: MultipleSelectField[Keyword] | None = Field(default=None)
+            keywords: Optional[MultipleSelectField[Keyword]] = Field(default=None)
 
         await Book(
             keywords=MultipleSelectField.from_enums(Keyword.ADVENTURE, Keyword.FICTION)
@@ -586,7 +586,7 @@ class MultipleSelectField(BaserowField, RootModel[list[SelectEntry]], Generic[Se
             self.root.append(SelectEntry(value=enum))
             names.append(enum.name)
         self.register_pending_change(
-            f"append enum(s) {", ".join(names)} to multiple select field",
+            f"append enum(s) {', '.join(names)} to multiple select field",
         )
 
     def clear(self):
@@ -618,7 +618,7 @@ class MultipleSelectField(BaserowField, RootModel[list[SelectEntry]], Generic[Se
         names = [
             entry.value.name for entry in to_be_removed if entry.value is not None]
         self.register_pending_change(
-            f"removed enum(s) {", ".join(names)} from multiple select field",
+            f"removed enum(s) {', '.join(names)} from multiple select field",
         )
 
     @classmethod

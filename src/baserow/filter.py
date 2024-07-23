@@ -3,8 +3,10 @@ Everything related to defining and using filters on data.
 """
 
 import enum
-from typing import Optional, Self, Union
-from pydantic import BaseModel, ConfigDict, Field, aliases
+from typing import Optional, Union
+
+from typing_extensions import Self
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class FilterMode(str, enum.Enum):

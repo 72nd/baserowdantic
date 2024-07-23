@@ -1,6 +1,8 @@
 import enum
 import random
-from typing import Self
+from typing import Optional
+
+from typing_extensions import Self
 
 
 class Color(str, enum.Enum):

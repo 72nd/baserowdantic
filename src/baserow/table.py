@@ -135,7 +135,7 @@ class TableLinkField(BaserowField, RootModel[list[RowLink]], Generic[T]):
         return False
 
     @classmethod
-    def from_value(cls, *instances: int | T):
+    def from_value(cls, *instances: Union[int, T]):
         """
         Instantiates a link field from a referencing value. Can be used to set a
         link directly when instantiating a table model using a parameter. This
@@ -184,7 +184,7 @@ class TableLinkField(BaserowField, RootModel[list[RowLink]], Generic[T]):
         """Returns a list of all ID's as string for debugging."""
         return ",".join([str(link.row_id) for link in self.root])
 
-    def append(self, *instances: int | T):
+    def append(self, *instances: Union[int, T]):
         """
         Add a link to the given table row(s). Please note that this method does
         not update the record on Baserow. You have to call `Table.update()`
@@ -516,7 +516,7 @@ class Table(BaseModel, abc.ABC):
         return await self.update_fields_by_id(self.row_id, by_alias, **kwargs)
 
     @valid_configuration
-    async def update(self: T) -> T | MinimalRow:
+    async def update(self: T) -> Union[T, MinimalRow]:
         """
         Updates all fields of a row with the data of this model instance. The
         row_id field must be set.
@@ -613,7 +613,7 @@ class Table(BaseModel, abc.ABC):
             ]
         ```
         """
-        rsl: Tuple[str, FieldInfo] | None = None
+        rsl: Optional[Tuple[str, FieldInfo]] = None
         for name, field in cls.model_fields.items():
             if any(isinstance(item, PrimaryField) for item in field.metadata):
                 if rsl is not None:
@@ -700,7 +700,15 @@ class Table(BaseModel, abc.ABC):
         return (primary, to_delete)
 
     @classmethod
-    def __validate_single_field(cls, field_name: str, value: Any) -> dict[str, Any] | tuple[dict[str, Any], dict[str, Any] | None, set[str]]:
+    def __validate_single_field(
+        cls,
+        field_name: str,
+        value: Any,
+    ) -> Union[
+        dict[str, Any],
+        tuple[dict[str, Any], dict[str, Any], set[str]],
+        Any,
+    ]:
         return cls.__pydantic_validator__.validate_assignment(
             cls.model_construct(), field_name, value
         )

@@ -1,6 +1,9 @@
 # Custom stuff
 test.py
 
+# VS Code(ium)
+.vscode/
+
 # Ignore example API credentials file.
 example/secrets.json
 

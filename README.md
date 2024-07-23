@@ -1,7 +1,7 @@
 <p align="right">
 <picture>
   <source media="(prefers-color-scheme: dark)" width="160" srcset="misc/toc-indicator-dark.svg">
-  <img alt="arrow pointing on the table of content button" width="160" src="misc/toc-indicator-light.svg">
+  <img alt="" width="160" src="misc/toc-indicator-light.svg">
 </picture>
 </p>
 <p align="center">
@@ -28,6 +28,15 @@ The package can be used in two different ways:
 
 1. [Direct Editing with API Basic Client](#basic-client): You can directly edit with Baserow using the API Basic Client.
 2. [Executing Actions on a Pydantic Model](#orm-like-access-using-models): Actions can be executed on a pydantic model. In this case, the table structure only needs to be defined once, and the library uses this information for all actions such as creating tables, reading and writing entries, and more.
+
+
+## Installation
+
+The installation is as simple as:
+
+```bash
+pip3 install baserowdantic
+```
 
 ## Walkthrough / Introductory Example
 

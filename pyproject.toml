@@ -6,7 +6,7 @@
 name = "baserowdantic"
 dynamic = ["version"]
 authors = [
-    {name = "Irvin Hostettler, ALEX Berlin", email = "hostettler@alex-berlin.de"}
+    {name = "72nd", email = "msg@frg72.com"}
 ]
 description = "Pydantic-based Baserow CRUD Client featuring ORM-like capabilities"
 readme = "README.md"

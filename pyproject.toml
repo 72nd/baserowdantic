@@ -4,7 +4,7 @@
 
 [project]
 name = "baserowdantic"
-version = "0.1.0"
+dynamic = ["version"]
 authors = [
     {name = "72nd", email = "msg@frg72.com"}
 ]

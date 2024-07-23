@@ -4,12 +4,13 @@
 
 [project]
 name = "baserowdantic"
-dynamic = ["version"]
+version = "0.1.0"
 authors = [
     {name = "72nd", email = "msg@frg72.com"}
 ]
 description = "Pydantic-based Baserow CRUD Client featuring ORM-like capabilities"
 readme = "README.md"
+requires-python = ">=3.9"
 keywords = ["baserow", "pydantic", "no-code", "orm", "database"]
 dependencies = [
     "aiohttp",
@@ -22,6 +23,11 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 
+[project.urls]
+Homepage = "https://github.com/72nd/baserowdantic"
+Issues = "https://github.com/72nd/baserowdantic/issues"
+Documentation = "https://72nd.github.io/baserowdantic/"
+
 [project.optional-dependencies]
 # Optional dependency to build the documentation.
 doc = [
@@ -30,3 +36,6 @@ doc = [
 
 [tool.setuptools.packages.find]
 where = ["src/"]
+
+[tool.flit.module]
+name = "baserow"

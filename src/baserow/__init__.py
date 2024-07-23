@@ -1,4 +1,6 @@
 """
+ Pydantic-based Baserow CRUD Client featuring ORM-like capabilities. 
+
 .. include:: ../../README.md
    :start-line: 16
 """
